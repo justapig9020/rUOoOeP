@@ -2,10 +2,13 @@ use crate::graph::Graph;
 use std::marker::Copy;
 use std::clone::Clone;
 use std::cmp::PartialEq;
+use std::rc::Rc;
+use std::cell::RefCell;
 
-pub enum RegVal {
+pub enum ArgVal {
     Waiting(RStag),
     Ready(u32),
+    Imm(u32),
 }
 
 pub struct RStag {
@@ -43,11 +46,12 @@ pub enum ExecResult {
 }
 
 pub trait ExecPath: Graph {
-    fn issue(&mut self, inst: &str, vals: Vec<RegVal>) -> Result<RStag, ()>;
+    fn list_inst(&self) -> Vec<&'static str>;
+    fn issue(&mut self, inst: &str, vals: Vec<ArgVal>) -> Result<RStag, ()>;
     fn next_cycle(&mut self);
     fn get_result(&mut self) -> Option<(RStag, ExecResult)>;
 }
 
-pub fn execution_path_factory(name: &str) -> Box<dyn ExecPath>{
+pub fn execution_path_factory(name: &str) -> Box<dyn ExecPath> {
     todo!();
 }
