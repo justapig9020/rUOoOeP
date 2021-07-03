@@ -4,6 +4,7 @@ use crate::register::RegFile;
 use std::collections::HashMap;
 use crate::result_bus::ResultBus;
 
+#[derive(Debug)]
 pub struct Processor {
     pc: usize,
     decoder: Decoder,
@@ -23,9 +24,11 @@ impl Processor {
         }
     }
     /// Add an execution path to the processor.
-    pub fn add_path(&mut self, name: String, func: String) -> Result<(), String> {
-        let path = execution_path_factory(&name, &func)?;
+    pub fn add_path(&mut self, func: &str) -> Result<(), String> {
+        let path = execution_path_factory(&func)?;
         let insts = path.list_inst();
+        let name = path.get_name();
+
         if let Some(prev) = self.paths.insert(name.clone(), path) {
             let msg = format!("Already has a execution path with name {}", prev.get_name());
             Err(msg)
@@ -33,7 +36,7 @@ impl Processor {
             self.decoder.register(insts, name)
         }
     }
-    pub fn fetch_line(&self) -> usize {
+    pub fn fetching(&self) -> usize {
         self.pc
     }
     pub fn next_cycle(&mut self, inst: &str) -> Result<(), String> {
@@ -68,12 +71,13 @@ impl Processor {
                     val = self.register_file.read(idx);
                 },
                 ArgType::Imm(imm) => {
-                    val = ArgVal::Imm(imm);
+                    val = ArgVal::Ready(imm);
                 },
             }
             arg_vals.push(val);
         }
 
+        let mut issued = false;
         // Searching for a suitable station to issue the instruction
         for name in inst.get_stations().iter() {
             // Find a reservation station by name
@@ -83,6 +87,7 @@ impl Processor {
                         self.register_file.rename(idx, tag);
                     }
                     // The instruction has been issued.
+                    issued = true;
                     break;
                 }
             }
@@ -90,6 +95,12 @@ impl Processor {
 
         for (_, exec_unit) in self.paths.iter_mut() {
             exec_unit.next_cycle(&mut self.result_bus);
+        }
+
+        // If the instruction not issued, stall the instruction fetch
+        // untill there are some reservation station is ready.
+        if issued {
+            self.pc += 1;
         }
         Ok(())
     }
