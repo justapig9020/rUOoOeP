@@ -85,6 +85,10 @@ impl Unit {
 #[derive(Debug)]
 struct RStation {
     slots: Vec<Option<ArthInst>>,
+    /// Due to the instruction can not go into execution in the cycle it just
+    /// commit.
+    /// Add the indicator to indicate the index that is just issued in this cycle.
+    just_issued: Option<usize>,
 }
 
 impl RStation {
@@ -95,6 +99,7 @@ impl RStation {
         }
         Self {
             slots,
+            just_issued: None,
         }
     }
     /// Insert a instruction to reservation station.
@@ -111,6 +116,7 @@ impl RStation {
                     arg0: args[0].clone(),
                     arg1: args[1].clone(),
                 });
+                self.just_issued = Some(idx);
                 return Some(idx);
             }
         }
@@ -120,7 +126,17 @@ impl RStation {
     /// If found, remove it from reservation station and return it.
     /// Otherwise, return None.
     fn ready(&mut self) -> Option<(usize, ArthInst)> {
+        let skip = if let Some(idx) = self.just_issued {
+            idx
+        } else {
+            // This index will never reached
+            self.slots.len()
+        };
+        self.just_issued = None;
         for (idx, slot) in self.slots.iter_mut().enumerate() {
+            if idx == skip {
+                continue;
+            }
             if let Some(inst) = slot {
                 if inst.is_ready() {
                     return Some((idx, inst.clone()));
