@@ -260,3 +260,34 @@ pub struct InstFormat {
     syntax: Vec<SyntaxType>,
     writeback: bool,
 }
+
+impl InstFormat {
+    pub fn create(name: &str) -> InstFormatCreater {
+        InstFormatCreater {
+            body: InstFormat {
+                name: name.to_string(),
+                syntax: Vec::new(),
+                writeback: false,
+            },
+        }
+    }
+}
+
+pub struct InstFormatCreater {
+    body: InstFormat,
+}
+
+impl InstFormatCreater {
+    pub fn add_syntax(mut self, syn_type: SyntaxType) -> Self {
+        self.body.syntax.push(syn_type);
+        self
+    }
+    pub fn set_writeback(mut self, w: bool) -> Self {
+        self.body.writeback = w;
+        self
+    }
+    pub fn done(self) -> InstFormat {
+        self.body
+    }
+}
+

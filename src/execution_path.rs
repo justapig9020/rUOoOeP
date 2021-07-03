@@ -1,3 +1,4 @@
+use crate::arthmatic_unit;
 use crate::graph::Graph;
 use std::marker::Copy;
 use std::clone::Clone;
@@ -53,7 +54,7 @@ impl ExecResult {
     }
 }
 
-pub trait ExecPath: Graph {
+pub trait ExecPath {
     fn get_name(&self) -> String;
     fn get_func(&self) -> String;
     fn list_inst(&self) -> Vec<InstFormat>;
@@ -62,6 +63,16 @@ pub trait ExecPath: Graph {
     fn next_cycle(&mut self, bus: &mut ResultBus);
 }
 
-pub fn execution_path_factory(name: &str, func: &str) -> Result<Box<dyn ExecPath>, String> {
-    todo!();
+pub fn execution_path_factory(func: &str) -> Result<Box<dyn ExecPath>, String> {
+    match func {
+        "arth" => {
+            let unit = arthmatic_unit::Unit::new();
+            let unit = Box::new(unit) as Box<dyn ExecPath>;
+            Ok(unit)
+        }
+        _ => {
+            let msg = format!("Not support function unit {}", func);
+            Err(msg)
+        }
+    }
 }

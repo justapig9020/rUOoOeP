@@ -23,9 +23,11 @@ impl Processor {
         }
     }
     /// Add an execution path to the processor.
-    pub fn add_path(&mut self, name: String, func: String) -> Result<(), String> {
-        let path = execution_path_factory(&name, &func)?;
+    pub fn add_path(&mut self, func: &str) -> Result<(), String> {
+        let path = execution_path_factory(&func)?;
         let insts = path.list_inst();
+        let name = path.get_name();
+
         if let Some(prev) = self.paths.insert(name.clone(), path) {
             let msg = format!("Already has a execution path with name {}", prev.get_name());
             Err(msg)
@@ -33,7 +35,7 @@ impl Processor {
             self.decoder.register(insts, name)
         }
     }
-    pub fn fetch_line(&self) -> usize {
+    pub fn fetching(&self) -> usize {
         self.pc
     }
     pub fn next_cycle(&mut self, inst: &str) -> Result<(), String> {
@@ -91,6 +93,7 @@ impl Processor {
         for (_, exec_unit) in self.paths.iter_mut() {
             exec_unit.next_cycle(&mut self.result_bus);
         }
+        self.pc += 1;
         Ok(())
     }
 }
