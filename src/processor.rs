@@ -38,15 +38,17 @@ impl Processor {
         let inst = self.decoder.decode(inst)?;
         let args = inst.get_args();
         let mut arg_vals = Vec::with_capacity(args.len());
-        if args.len() == 0 {
-            let msg = String::from("Expcet more than one argument");
-            return Err(msg);
-        }
         let mut start = 0;
         let mut dest = None;
-        if let ArgType::Reg(idx) = args[0]{
-            start = 1;
-            dest = Some(idx);
+        if inst.is_writeback() {
+            if args.len() == 0 {
+                let msg = String::from("Expcet more than one argument");
+                return Err(msg);
+            }
+            if let ArgType::Reg(idx) = args[0]{
+                start = 1;
+                dest = Some(idx);
+            }
         }
 
         // Mapping arguments from types to data

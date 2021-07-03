@@ -6,7 +6,7 @@ use std::rc::Rc;
 /// appropriate name of reservation station
 pub struct Decoder {
     stations: HashMap<String, StationList>,
-    syntax: HashMap<String, Syntax>,
+    formats: HashMap<String, InstFormat>,
 }
 
 #[cfg(test)]
@@ -14,38 +14,56 @@ mod decoder {
     use super::*;
     #[test]
     fn register_mul() {
+        use SyntaxType::*;
         let mut d = Decoder::new();
-        let test_inst = vec![(String::from("i1"), Vec::new()), (String::from("i2"), Vec::new())];
+        let test_inst = vec![
+        InstFormat {
+            name: String::from("add"),
+            syntax: vec![Register, Register, Register],
+            writeback: true,
+        },
+        InstFormat {
+            name: String::from("addi"),
+            syntax: vec![Register, Register, Immediate],
+            writeback: false,
+        },
+        ];
         let station0 = String::from("station0");
         let station1 = String::from("station1");
 
         d.register(test_inst.clone(), station0.clone()).unwrap();
         d.register(test_inst.clone(), station1.clone()).unwrap();
 
-        for (name, expect_syntax) in test_inst.iter() {
+        for expect_format in test_inst.iter() {
+            let name = &expect_format.name;
             let content = d.stations.get(name).unwrap();
             let stations = content.station.borrow();
             assert_eq!(stations[0], station0);
             assert_eq!(stations[1], station1);
-            let syntax = d.syntax.get(name).unwrap();
-            assert_eq!(expect_syntax, syntax);
+
+            let format = d.formats.get(name).unwrap();
+            assert_eq!(expect_format, format);
         }
     }
     #[test]
     fn decode() {
         use SyntaxType::*;
         let mut d = Decoder::new();
-        let inst = vec![(String::from("add"), vec![Register, Register, Immediate])];
+        let inst = vec![InstFormat {
+            name: String::from("add"),
+            syntax: vec![Register, Register, Immediate],
+            writeback: true,
+        }];
         let station = String::from("station");
-        let args = vec![String::from("r0"), String::from("R13"), String::from("#100")];
-        let to_decode = format!("{} {} {} {}", inst[0].0, args[0], args[1], args[2]);
+        let to_decode = String::from("add R0, R13, #100");
+
         d.register(inst, station.clone()).unwrap();
 
         let got = d.decode(&to_decode).unwrap();
         assert_eq!(1, got.stations.len());
         assert_eq!(station, got.stations[0]);
 
-        assert_eq!(args.len(), got.args.len());
+        assert_eq!(3, got.args.len());
         assert_eq!(ArgType::Reg(0), got.args[0]);
         assert_eq!(ArgType::Reg(13), got.args[1]);
         assert_eq!(ArgType::Imm(100), got.args[2]);
@@ -54,10 +72,14 @@ mod decoder {
     fn invalid_instruction() {
         use SyntaxType::*;
         let mut d = Decoder::new();
-        let inst = vec![(String::from("add"), vec![Register, Register, Immediate])];
+        let inst = vec![InstFormat {
+            name: String::from("add"),
+            syntax: vec![Register, Register, Immediate],
+            writeback: true,
+        }];
         let station = String::from("station");
         let args = vec![String::from("r0"), String::from("R13"), String::from("#100")];
-        let to_decode = format!("{} {} {} {}", inst[0].0, args[0], args[1], args[1]);
+        let to_decode = String::from("add R0, R13, 100");
         d.register(inst, station.clone()).unwrap();
 
         assert!(d.decode(&to_decode).is_err());
@@ -68,24 +90,25 @@ impl Decoder {
     pub fn new() -> Self {
         Self {
             stations: HashMap::new(),
-            syntax: HashMap::new(),
+            formats: HashMap::new(),
         }
     }
-    pub fn register(&mut self, inst_list: Vec<(String, Vec<SyntaxType>)>, name: String) -> Result<(), String> {
+    pub fn register(&mut self, inst_list: Vec<InstFormat>, station: String) -> Result<(), String> {
         if inst_list.len() == 0 {
             return Ok(());
         }
-        if let Some(station_list) = self.stations.get_mut(&inst_list[0].0) {
-            station_list.push(&name);
+        if let Some(station_list) = self.stations.get_mut(&inst_list[0].name) {
+            station_list.push(&station);
         } else {
-            let station = StationList::new(&name);
-            for (name, syntax) in inst_list.iter() {
-                let prev = self.stations.insert(name.clone(), station.clone());
+            let station = StationList::new(&station);
+            for format in inst_list.iter() {
+                let inst = &format.name;
+                let prev = self.stations.insert(inst.clone(), station.clone());
                 if let Some(_) = prev {
-                    let msg = format!("Instruction {} has been used by other function unit", name);
+                    let msg = format!("Instruction {} has been used by other function unit", inst);
                     return Err(msg);
                 }
-                self.syntax.insert(name.clone(), syntax.clone());
+                self.formats.insert(inst.clone(), format.clone());
             }
         }
         Ok(())
@@ -98,10 +121,11 @@ impl Decoder {
         }
         let inst_name = tokens[0];
         if let Some(list) = self.stations.get(inst_name) {
-            if let Some(syntax) = self.syntax.get(inst_name) {
+            if let Some(format) = self.formats.get(inst_name) {
                 let stations = list.station.borrow();
                 let stations = (*stations).clone();
                 let mut args = Vec::with_capacity(tokens.len() - 1);
+                let syntax = &format.syntax;
                 for (token, expect_type) in tokens[1..].iter().zip(syntax.iter()) {
                     let arg = arg_scan(token)?;
                     let get_type = SyntaxType::from(arg);
@@ -115,6 +139,7 @@ impl Decoder {
                     name: inst_name.to_string(),
                     stations,
                     args,
+                    writeback: format.writeback,
                 });
             }
         }
@@ -164,8 +189,6 @@ fn text_slicer<'a>(txt: &'a str) -> Vec<&'a str> {
     v
 }
 
-type Syntax = Vec<SyntaxType>;
-
 #[derive(Clone)]
 struct StationList {
     station: Rc<RefCell<Vec<String>>>,
@@ -192,6 +215,7 @@ pub struct DecodedInst {
     name: String,
     stations: Vec<String>,
     args: Vec<ArgType>,
+    writeback: bool,
 }
 
 impl DecodedInst {
@@ -203,6 +227,9 @@ impl DecodedInst {
     }
     pub fn get_args<'a>(&'a self) -> &'a Vec<ArgType> {
         &self.args
+    }
+    pub fn is_writeback(&self) -> bool {
+        self.writeback
     }
 }
 
@@ -225,4 +252,11 @@ impl SyntaxType {
             ArgType::Imm(_) => SyntaxType::Immediate,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct InstFormat {
+    name: String,
+    syntax: Vec<SyntaxType>,
+    writeback: bool,
 }
