@@ -82,7 +82,8 @@ impl Decoder {
             let msg = format!("No token has been found in instruction {}", inst);
             return Err(msg);
         }
-        if let Some(list) = self.mapping.get(tokens[0]) {
+        let inst_name = tokens[0];
+        if let Some(list) = self.mapping.get(inst_name) {
             let stations = list.station.borrow();
             let stations = (*stations).clone();
             let mut args = Vec::with_capacity(tokens.len() - 1);
@@ -91,6 +92,7 @@ impl Decoder {
                 args.push(arg);
             }
             Ok(DecodedInst {
+                name: inst_name.to_string(),
                 stations,
                 args,
             })
@@ -147,8 +149,21 @@ struct StationList {
 }
 
 pub struct DecodedInst {
+    name: String,
     stations: Vec<String>,
     args: Vec<ArgType>,
+}
+
+impl DecodedInst {
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+    pub fn get_stations<'a>(&'a self) -> &'a Vec<String> {
+        &self.stations
+    }
+    pub fn get_args<'a>(&'a self) -> &'a Vec<ArgType> {
+        &self.args
+    }
 }
 
 #[derive(Eq, PartialEq, Debug)]
