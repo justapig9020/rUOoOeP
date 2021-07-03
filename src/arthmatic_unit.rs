@@ -32,7 +32,12 @@ impl ExecPath for Unit {
                 .done(),]
     }
     fn forwarding(&mut self, tag: RStag, val: u32) {
-
+        let station = tag.get_station();
+        if self.get_name() == station {
+            let idx = tag.get_slot();
+            self.station.sloved(idx);
+        }
+        self.station.forwarding(&tag, val);
     }
     fn issue(&mut self, inst: String, vals:&[ArgVal]) -> Result<RStag, ()> {
         if let Some(idx) = self.station.insert(inst, vals) {
@@ -124,6 +129,19 @@ impl RStation {
         }
         None
     }
+    /// The slot's instruction is solved, remove it.
+    fn sloved(&mut self, idx: usize) {
+        if idx < self.slots.len() {
+            self.slots[idx] = None;
+        }
+    }
+    fn forwarding(&mut self, tag: &RStag, val: u32) {
+        for slot in self.slots.iter_mut() {
+            if let Some(slot) = slot {
+                slot.forwarding(tag, val);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -142,6 +160,18 @@ impl ArthInst {
             }
         }
         false
+    }
+    fn forwarding(&mut self, tag: &RStag, val: u32) {
+        if let ArgVal::Waiting(wait) = self.arg0.clone() {
+            if wait == *tag {
+                self.arg0 = ArgVal::Ready(val);
+            }
+        }
+        if let ArgVal::Waiting(wait) = self.arg1.clone() {
+            if wait == *tag {
+                self.arg1 = ArgVal::Ready(val);
+            }
+        }
     }
 }
 

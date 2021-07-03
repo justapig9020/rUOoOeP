@@ -49,6 +49,12 @@ impl RStag {
             slot,
         }
     }
+    pub fn get_station(&self) -> String {
+        self.name.clone()
+    }
+    pub fn get_slot(&self) -> usize {
+        self.slot
+    }
 }
 
 #[derive(Debug)]
