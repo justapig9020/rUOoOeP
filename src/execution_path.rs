@@ -2,8 +2,7 @@ use crate::graph::Graph;
 use std::marker::Copy;
 use std::clone::Clone;
 use std::cmp::PartialEq;
-use std::rc::Rc;
-use std::cell::RefCell;
+use crate::decoder::SyntaxType;
 
 pub enum ArgVal {
     Waiting(RStag),
@@ -48,7 +47,7 @@ pub enum ExecResult {
 pub trait ExecPath: Graph {
     fn get_name(&self) -> String;
     fn get_func(&self) -> String;
-    fn list_inst(&self) -> Vec<&'static str>;
+    fn list_inst(&self) -> Vec<(String, Vec<SyntaxType>)>;
     fn issue(&mut self, inst: String, vals:&[ArgVal]) -> Result<RStag, ()>;
     fn next_cycle(&mut self);
     fn get_result(&mut self) -> Option<(RStag, ExecResult)>;

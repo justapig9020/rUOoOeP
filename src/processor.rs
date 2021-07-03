@@ -28,7 +28,7 @@ impl Processor {
             let msg = format!("Already has a execution path with name {}", prev.get_name());
             Err(msg)
         } else {
-            self.decoder.register(&insts, name)
+            self.decoder.register(insts, name)
         }
     }
     pub fn fetch_line(&self) -> usize {
