@@ -9,7 +9,15 @@ use std::fmt::Debug;
 pub enum ArgVal {
     Waiting(RStag),
     Ready(u32),
-    Imm(u32),
+}
+
+impl ArgVal {
+    pub fn val(&self) -> Option<u32> {
+        match self {
+            ArgVal::Waiting(_) => None,
+            ArgVal::Ready(val) => Some(*val),
+        }
+    }
 }
 
 #[derive(Debug)]

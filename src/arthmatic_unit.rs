@@ -1,4 +1,4 @@
-use crate::execution_path::{ RStag, ExecPath, ArgVal };
+use crate::execution_path::{ RStag, ExecPath, ArgVal, ExecResult};
 use crate::decoder::{ InstFormat, InstFormatCreater , SyntaxType};
 use crate::result_bus::ResultBus;
 
@@ -6,6 +6,7 @@ use crate::result_bus::ResultBus;
 pub struct Unit {
     name: String,
     station: RStation,
+    exec: Option<ExecUnit>,
 }
 
 impl ExecPath for Unit {
@@ -42,7 +43,21 @@ impl ExecPath for Unit {
         }
     }
     fn next_cycle(&mut self, bus: &mut ResultBus) {
-
+        if let Some(unit) = self.exec.as_mut() {
+            let done = unit.next_cycle(bus);
+            if done {
+                // execution done
+                self.exec = None;
+            }
+        } else {
+            if let Some((idx, inst)) = self.station.ready() {
+                let name = inst.inst;
+                let arg0 = inst.arg0.val().unwrap_or(0);
+                let arg1 = inst.arg1.val().unwrap_or(0);
+                let tag = RStag::new(&self.get_name(), idx);
+                self.exec = Some(ExecUnit::exec(tag, name, arg0, arg1));
+            }
+        }
     }
 }
 
@@ -57,6 +72,7 @@ impl Unit {
         Self {
             name: format!("arth{}", idx),
             station: RStation::new(5),
+            exec: None,
         }
     }
 }
@@ -76,6 +92,9 @@ impl RStation {
             slots,
         }
     }
+    /// Insert a instruction to reservation station.
+    /// Retuen Some(slot number) is the insert success.
+    /// Return None if there is no empty slot.
     fn insert(&mut self, inst: String, args: &[ArgVal]) -> Option<usize> {
         if args.len() != 2 {
             return None;
@@ -92,11 +111,71 @@ impl RStation {
         }
         None
     }
+    /// Find a ready instruction.
+    /// If found, remove it from reservation station and return it.
+    /// Otherwise, return None.
+    fn ready(&mut self) -> Option<(usize, ArthInst)> {
+        for (idx, slot) in self.slots.iter_mut().enumerate() {
+            if let Some(inst) = slot {
+                if inst.is_ready() {
+                    return Some((idx, inst.clone()));
+                }
+            }
+        }
+        None
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ArthInst {
     inst: String,
     arg0: ArgVal,
     arg1: ArgVal,
+}
+
+impl ArthInst {
+    /// An instruction is ready if it's not waiting result of another instruction.
+    fn is_ready(&self) -> bool {
+        if let ArgVal::Ready(_) = self.arg0 {
+            if let ArgVal::Ready(_) = self.arg1 {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+#[derive(Debug)]
+struct ExecUnit {
+    cycle: usize,
+    tag: RStag,
+    result: u32,
+}
+
+impl ExecUnit {
+    fn exec(tag: RStag, inst: String, arg0: u32, arg1: u32) -> Self {
+        let (cycle, result) = match inst.as_str() {
+            "add" | "addi" => (1, arg0 + arg1),
+            _ => (0, 0),
+        };
+        Self {
+            cycle,
+            tag,
+            result,
+        }
+    }
+    fn next_cycle(&mut self, bus: &mut ResultBus) -> bool {
+        if self.cycle == 0 {
+            let tag = self.tag.clone();
+            let result = ExecResult::Arth(self.result);
+            if bus.set(tag, result) {
+                true
+            } else {
+                false
+            }
+        } else {
+            self.cycle -= 1;
+            false
+        }
+    }
 }

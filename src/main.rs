@@ -8,13 +8,24 @@ mod arthmatic_unit;
 use processor::Processor;
 use std::io;
 
-const program: [&str; 3] = [
-    "addi R1, R0, #100",
-    "addi R2, R0, #200",
-    "add R3, R1, R2",
-];
-
 fn main() -> Result<(), String> {
+    let program = vec![
+        "addi R1, R0, #100",
+        "addi R2, R0, #200",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+        "add R3, R1, R2",
+    ];
     let mut p = Processor::new();
     p.add_path("arth")?;
     loop {

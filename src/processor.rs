@@ -71,7 +71,7 @@ impl Processor {
                     val = self.register_file.read(idx);
                 },
                 ArgType::Imm(imm) => {
-                    val = ArgVal::Imm(imm);
+                    val = ArgVal::Ready(imm);
                 },
             }
             arg_vals.push(val);
