@@ -1,10 +1,9 @@
 use crate::arthmatic_unit;
-use crate::graph::Graph;
-use std::marker::Copy;
 use std::clone::Clone;
 use std::cmp::PartialEq;
 use crate::decoder::InstFormat;
 use crate::result_bus::ResultBus;
+use std::fmt::Debug;
 
 pub enum ArgVal {
     Waiting(RStag),
@@ -12,6 +11,7 @@ pub enum ArgVal {
     Imm(u32),
 }
 
+#[derive(Debug)]
 pub struct RStag {
     name: String,
     slot: usize,
@@ -42,6 +42,7 @@ impl RStag {
     }
 }
 
+#[derive(Debug)]
 pub enum ExecResult {
     Arth(u32),
 }
@@ -54,7 +55,7 @@ impl ExecResult {
     }
 }
 
-pub trait ExecPath {
+pub trait ExecPath: Debug {
     fn get_name(&self) -> String;
     fn get_func(&self) -> String;
     fn list_inst(&self) -> Vec<InstFormat>;

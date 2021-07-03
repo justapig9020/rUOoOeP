@@ -4,6 +4,7 @@ use crate::register::RegFile;
 use std::collections::HashMap;
 use crate::result_bus::ResultBus;
 
+#[derive(Debug)]
 pub struct Processor {
     pc: usize,
     decoder: Decoder,

@@ -6,6 +6,7 @@ mod processor;
 mod result_bus;
 mod arthmatic_unit;
 use processor::Processor;
+use std::io;
 
 const program: [&str; 3] = [
     "addi R1, R0, #100",
@@ -22,8 +23,18 @@ fn main() -> Result<(), String> {
             break;
         }
         let inst = program[line];
+        println!("Line {}:", line);
+        println!("{:#?}", p);
+        pause();
         p.next_cycle(inst)?;
     }
+    println!("");
     println!("Emulation finished");
+    println!("{:#?}", p);
     Ok(())
+}
+
+fn pause() {
+    let mut s = String::new();
+    io::stdin().read_line(&mut s).unwrap();
 }

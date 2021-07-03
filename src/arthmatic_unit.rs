@@ -2,6 +2,7 @@ use crate::execution_path::{ RStag, ExecPath, ArgVal };
 use crate::decoder::{ InstFormat, InstFormatCreater , SyntaxType};
 use crate::result_bus::ResultBus;
 
+#[derive(Debug)]
 pub struct Unit {
     name: String,
 }

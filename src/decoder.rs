@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[derive(Debug)]
 /// Decoder is used to decode instruction and find
 /// appropriate name of reservation station
 pub struct Decoder {
@@ -189,7 +190,7 @@ fn text_slicer<'a>(txt: &'a str) -> Vec<&'a str> {
     v
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct StationList {
     station: Rc<RefCell<Vec<String>>>,
 }

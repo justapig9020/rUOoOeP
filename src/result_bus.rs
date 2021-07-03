@@ -1,5 +1,6 @@
 use crate::execution_path::{RStag, ExecResult};
 
+#[derive(Debug)]
 pub struct ResultBus {
     value: Option<(RStag, ExecResult)>,
 }

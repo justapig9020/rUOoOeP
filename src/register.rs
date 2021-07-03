@@ -1,11 +1,12 @@
 use crate::execution_path::{RStag, ArgVal};
 use std::default::Default;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct RegFile {
     entry: [Entry; 16],
 }
 
+#[derive(Debug)]
 struct Entry {
     val: u32,
     tag: Option<RStag>,
