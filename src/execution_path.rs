@@ -3,6 +3,7 @@ use std::marker::Copy;
 use std::clone::Clone;
 use std::cmp::PartialEq;
 use crate::decoder::InstFormat;
+use crate::result_bus::ResultBus;
 
 pub enum ArgVal {
     Waiting(RStag),
@@ -44,13 +45,21 @@ pub enum ExecResult {
     Arth(u32),
 }
 
+impl ExecResult {
+    pub fn val(&self) -> u32 {
+        match self {
+            ExecResult::Arth(val) => *val,
+        }
+    }
+}
+
 pub trait ExecPath: Graph {
     fn get_name(&self) -> String;
     fn get_func(&self) -> String;
     fn list_inst(&self) -> Vec<InstFormat>;
+    fn forwarding(&mut self, tag: RStag, val: u32);
     fn issue(&mut self, inst: String, vals:&[ArgVal]) -> Result<RStag, ()>;
-    fn next_cycle(&mut self);
-    fn get_result(&mut self) -> Option<(RStag, ExecResult)>;
+    fn next_cycle(&mut self, bus: &mut ResultBus);
 }
 
 pub fn execution_path_factory(name: &str, func: &str) -> Result<Box<dyn ExecPath>, String> {
