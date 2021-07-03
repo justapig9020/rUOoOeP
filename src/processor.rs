@@ -77,6 +77,7 @@ impl Processor {
             arg_vals.push(val);
         }
 
+        let mut issued = false;
         // Searching for a suitable station to issue the instruction
         for name in inst.get_stations().iter() {
             // Find a reservation station by name
@@ -86,6 +87,7 @@ impl Processor {
                         self.register_file.rename(idx, tag);
                     }
                     // The instruction has been issued.
+                    issued = true;
                     break;
                 }
             }
@@ -94,7 +96,12 @@ impl Processor {
         for (_, exec_unit) in self.paths.iter_mut() {
             exec_unit.next_cycle(&mut self.result_bus);
         }
-        self.pc += 1;
+
+        // If the instruction not issued, stall the instruction fetch
+        // untill there are some reservation station is ready.
+        if issued {
+            self.pc += 1;
+        }
         Ok(())
     }
 }

@@ -5,6 +5,7 @@ use crate::decoder::InstFormat;
 use crate::result_bus::ResultBus;
 use std::fmt::Debug;
 
+#[derive(Debug, Clone)]
 pub enum ArgVal {
     Waiting(RStag),
     Ready(u32),
