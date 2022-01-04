@@ -95,4 +95,23 @@ impl RegFile {
     pub fn rename(&mut self, idx: usize, tag: RStag) {
         self.entry[idx].tag = Some(tag);
     }
+    pub fn size(&self) -> usize {
+        self.entry.len()
+    }
+    pub fn dump(&self) -> Vec<String> {
+        let size = self.entry.len();
+        let mut ret = Vec::with_capacity(size);
+        for reg in self.entry.iter() {
+            let content = match reg.tag.as_ref() {
+                Some(tag) => {
+                    format!("{}({})", tag.station(), tag.slot())
+                },
+                None => {
+                    reg.val.to_string()
+                }
+            };
+            ret.push(content);
+        }
+        ret
+    }
 }

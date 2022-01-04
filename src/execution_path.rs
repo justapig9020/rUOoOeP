@@ -49,10 +49,10 @@ impl RStag {
             slot,
         }
     }
-    pub fn get_station(&self) -> String {
+    pub fn station(&self) -> String {
         self.name.clone()
     }
-    pub fn get_slot(&self) -> usize {
+    pub fn slot(&self) -> usize {
         self.slot
     }
 }

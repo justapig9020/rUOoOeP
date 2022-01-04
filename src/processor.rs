@@ -3,6 +3,8 @@ use crate::execution_path::{execution_path_factory, ExecPath, ArgVal};
 use crate::register::RegFile;
 use std::collections::HashMap;
 use crate::result_bus::ResultBus;
+use crate::display::into_table;
+use std::fmt;
 
 #[derive(Debug)]
 pub struct Processor {
@@ -11,6 +13,13 @@ pub struct Processor {
     paths: HashMap<String, Box<dyn ExecPath>>,
     register_file: RegFile,
     result_bus: ResultBus,
+}
+
+impl fmt::Display for Processor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let info = self.print();
+        write!(f, "{}", info)
+    }
 }
 
 impl Processor {
@@ -107,5 +116,11 @@ impl Processor {
             self.pc += 1;
         }
         Ok(())
+    }
+    fn print(&self) -> String {
+        let mut registers = vec![format!("PC: {}", self.pc)];
+        let mut gpr = self.register_file.dump();
+        registers.append(&mut gpr);
+        into_table("Registers", registers)
     }
 }

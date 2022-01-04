@@ -5,6 +5,7 @@ mod decoder;
 mod processor;
 mod result_bus;
 mod arthmatic_unit;
+mod display;
 use processor::Processor;
 use std::io;
 
@@ -28,7 +29,6 @@ fn main() -> Result<(), String> {
     ];
     let mut p = Processor::new();
     p.add_path("arth")?;
-    println!("{:#?}", p);
     loop {
         let line = p.fetching();
         if line >= program.len() {
@@ -36,7 +36,7 @@ fn main() -> Result<(), String> {
         }
         let inst = program[line];
         println!("Line {}:", line);
-        println!("{:#?}", p);
+        println!("{}", p);
         pause();
         p.next_cycle(inst)?;
     }

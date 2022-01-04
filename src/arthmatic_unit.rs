@@ -32,9 +32,9 @@ impl ExecPath for Unit {
                 .done(),]
     }
     fn forwarding(&mut self, tag: RStag, val: u32) {
-        let inst_from = tag.get_station();
+        let inst_from = tag.station();
         if self.get_name() == inst_from {
-            let idx = tag.get_slot();
+            let idx = tag.slot();
             self.station.sloved(idx);
         }
         self.station.forwarding(&tag, val);
