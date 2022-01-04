@@ -104,7 +104,7 @@ impl RegFile {
         for reg in self.entry.iter() {
             let content = match reg.tag.as_ref() {
                 Some(tag) => {
-                    format!("{}({})", tag.station(), tag.slot())
+                    format!("{}", tag)
                 },
                 None => {
                     reg.val.to_string()

@@ -1,6 +1,8 @@
 use crate::execution_path::{ RStag, ExecPath, ArgVal, ExecResult};
 use crate::decoder::{ InstFormat, InstFormatCreater , SyntaxType};
 use crate::result_bus::ResultBus;
+use crate::display::into_table;
+use std::fmt::{self, Display};
 
 #[derive(Debug)]
 pub struct Unit {
@@ -61,6 +63,17 @@ impl ExecPath for Unit {
                 self.exec = Some(ExecUnit::exec(tag, name, arg0, arg1));
             }
         }
+    }
+    fn dump(&self) -> String {
+        let mut info = format!("{}\n", self.name);
+        let slots: Vec<String> = self.station.slots.iter().map(|slot| {
+            match slot.as_ref() {
+                Some(c) => format!("{}", c),
+                None => String::from("None")
+            }
+        }).collect();
+        info.push_str(&into_table("Reservation station", slots));
+        info
     }
 }
 
@@ -163,6 +176,12 @@ struct ArthInst {
     inst: String,
     arg0: ArgVal,
     arg1: ArgVal,
+}
+
+impl Display for ArthInst {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}, {}", self.inst, self.arg0, self.arg1)
+    }
 }
 
 impl ArthInst {

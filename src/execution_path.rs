@@ -3,12 +3,26 @@ use std::clone::Clone;
 use std::cmp::PartialEq;
 use crate::decoder::InstFormat;
 use crate::result_bus::ResultBus;
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Display};
 
 #[derive(Debug, Clone)]
 pub enum ArgVal {
     Waiting(RStag),
     Ready(u32),
+}
+
+impl Display for ArgVal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let content = match self {
+            ArgVal::Waiting(tag) => {
+                format!("{}", tag)
+            },
+            ArgVal::Ready(val) => {
+                val.to_string()
+            }
+        };
+        write!(f, "{}", content)
+    }
 }
 
 impl ArgVal {
@@ -26,6 +40,11 @@ pub struct RStag {
     slot: usize,
 }
 
+impl Display for RStag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}({})", self.station(), self.slot())
+    }
+}
 impl PartialEq for RStag {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name &&
@@ -77,6 +96,7 @@ pub trait ExecPath: Debug {
     fn forwarding(&mut self, tag: RStag, val: u32);
     fn issue(&mut self, inst: String, vals:&[ArgVal]) -> Result<RStag, ()>;
     fn next_cycle(&mut self, bus: &mut ResultBus);
+    fn dump(&self) -> String;
 }
 
 pub fn execution_path_factory(func: &str) -> Result<Box<dyn ExecPath>, String> {

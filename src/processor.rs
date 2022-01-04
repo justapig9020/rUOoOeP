@@ -62,7 +62,7 @@ impl Processor {
         }
 
         let inst = self.decoder.decode(inst)?;
-        let args = inst.get_args();
+        let args = inst.args();
         let mut arg_vals = Vec::with_capacity(args.len());
         let mut start = 0;
         let mut dest = None;
@@ -92,10 +92,10 @@ impl Processor {
 
         let mut issued = false;
         // Searching for a suitable station to issue the instruction
-        for name in inst.get_stations().iter() {
+        for name in inst.stations().iter() {
             // Find a reservation station by name
             if let Some(station) = self.paths.get_mut(name) {
-                if let Ok(tag) = station.issue(inst.get_name(), &arg_vals) {
+                if let Ok(tag) = station.issue(inst.name(), &arg_vals) {
                     if let Some(idx) = dest {
                         self.register_file.rename(idx, tag);
                     }
@@ -118,9 +118,14 @@ impl Processor {
         Ok(())
     }
     fn print(&self) -> String {
+        let mut info = String::new();
         let mut registers = vec![format!("PC: {}", self.pc)];
         let mut gpr = self.register_file.dump();
         registers.append(&mut gpr);
-        into_table("Registers", registers)
+        let last_instruction = self.decoder.last_instruction().to_string();
+        info.push_str(&into_table("Instruction", vec![last_instruction]));
+        info.push_str(&into_table("Registers", registers));
+        self.paths.iter().for_each(|(_, p)| info.push_str(&p.dump()));
+        info
     }
 }

@@ -6,6 +6,7 @@ use std::rc::Rc;
 /// Decoder is used to decode instruction and find
 /// appropriate name of reservation station
 pub struct Decoder {
+    instruction: String,
     stations: HashMap<String, StationList>,
     formats: HashMap<String, InstFormat>,
 }
@@ -90,6 +91,7 @@ mod decoder {
 impl Decoder {
     pub fn new() -> Self {
         Self {
+            instruction: String::new(),
             stations: HashMap::new(),
             formats: HashMap::new(),
         }
@@ -121,7 +123,8 @@ impl Decoder {
                 (*stations).clone()
             }).ok_or(String::from("No comresponding station"))
     }
-    pub fn decode(&self, inst: &str) -> Result<DecodedInst, String> {
+    pub fn decode(&mut self, inst: &str) -> Result<DecodedInst, String> {
+        self.instruction = String::from(inst);
         let tokens = text_slicer(inst);
         if tokens.len() == 0 {
             let msg = format!("No token has been found in instruction {}", inst);
@@ -154,6 +157,9 @@ impl Decoder {
             args,
             writeback: format.writeback,
         })
+    }
+    pub fn last_instruction(&self) -> &str {
+        &self.instruction
     }
 }
 
@@ -228,13 +234,13 @@ pub struct DecodedInst {
 }
 
 impl DecodedInst {
-    pub fn get_name(&self) -> String {
+    pub fn name(&self) -> String {
         self.name.clone()
     }
-    pub fn get_stations<'a>(&'a self) -> &'a Vec<String> {
+    pub fn stations<'a>(&'a self) -> &'a Vec<String> {
         &self.stations
     }
-    pub fn get_args<'a>(&'a self) -> &'a Vec<ArgType> {
+    pub fn args<'a>(&'a self) -> &'a Vec<ArgType> {
         &self.args
     }
     pub fn is_writeback(&self) -> bool {
