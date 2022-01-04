@@ -32,20 +32,18 @@ impl ExecPath for Unit {
                 .done(),]
     }
     fn forwarding(&mut self, tag: RStag, val: u32) {
-        let station = tag.get_station();
-        if self.get_name() == station {
+        let inst_from = tag.get_station();
+        if self.get_name() == inst_from {
             let idx = tag.get_slot();
             self.station.sloved(idx);
         }
         self.station.forwarding(&tag, val);
     }
     fn issue(&mut self, inst: String, vals:&[ArgVal]) -> Result<RStag, ()> {
-        if let Some(idx) = self.station.insert(inst, vals) {
+        self.station.insert(inst, vals).map(|idx| {
             let tag = RStag::new(&self.name, idx);
-            Ok(tag)
-        } else {
-            Err(())
-        }
+            tag
+        }).ok_or(())
     }
     fn next_cycle(&mut self, bus: &mut ResultBus) {
         if let Some(unit) = self.exec.as_mut() {

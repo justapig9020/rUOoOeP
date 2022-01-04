@@ -79,7 +79,7 @@ mod decoder {
             writeback: true,
         }];
         let station = String::from("station");
-        let args = vec![String::from("r0"), String::from("R13"), String::from("#100")];
+        let _args = vec![String::from("r0"), String::from("R13"), String::from("#100")];
         let to_decode = String::from("add R0, R13, 100");
         d.register(inst, station.clone()).unwrap();
 
@@ -114,38 +114,46 @@ impl Decoder {
         }
         Ok(())
     }
+    fn correspond_station(&self, inst_name: &str) -> Result<Vec<String>, String> {
+        self.stations.get(inst_name)
+            .map(|list| {
+                let stations = list.station.borrow();
+                (*stations).clone()
+            }).ok_or(String::from("No comresponding station"))
+    }
     pub fn decode(&self, inst: &str) -> Result<DecodedInst, String> {
         let tokens = text_slicer(inst);
         if tokens.len() == 0 {
             let msg = format!("No token has been found in instruction {}", inst);
             return Err(msg);
         }
+
         let inst_name = tokens[0];
-        if let Some(list) = self.stations.get(inst_name) {
-            if let Some(format) = self.formats.get(inst_name) {
-                let stations = list.station.borrow();
-                let stations = (*stations).clone();
-                let mut args = Vec::with_capacity(tokens.len() - 1);
-                let syntax = &format.syntax;
-                for (token, expect_type) in tokens[1..].iter().zip(syntax.iter()) {
-                    let arg = arg_scan(token)?;
-                    let get_type = SyntaxType::from(arg);
-                    if *expect_type != get_type {
-                        let msg = format!("Expect type {:?}, but get type {:?}", *expect_type, get_type);
-                        return Err(msg);
-                    }
-                    args.push(arg);
-                }
-                return Ok(DecodedInst {
-                    name: inst_name.to_string(),
-                    stations,
-                    args,
-                    writeback: format.writeback,
-                });
+        let arguments = &tokens[1..];
+
+        let stations = self.correspond_station(inst_name)?;
+
+        let format = self.formats
+            .get(inst_name)
+            .ok_or(format!("Instruct {} has not implemented", inst))?;
+        let mut args = Vec::with_capacity(tokens.len() - 1);
+        let syntax = &format.syntax;
+        for (token, expect_type) in arguments.iter().zip(syntax.iter()) {
+            let arg = arg_scan(token)?;
+            let get_type = SyntaxType::from(arg);
+            if *expect_type != get_type {
+                let msg = format!("Expect type {:?}, but get type {:?}", *expect_type, get_type);
+                return Err(msg);
             }
+            args.push(arg);
         }
-        let msg = format!("Instruct {} has not implemented", inst);
-        Err(msg)
+
+        return Ok(DecodedInst {
+            name: inst_name.to_string(),
+            stations,
+            args,
+            writeback: format.writeback,
+        })
     }
 }
 

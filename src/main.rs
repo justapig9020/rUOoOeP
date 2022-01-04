@@ -28,6 +28,7 @@ fn main() -> Result<(), String> {
     ];
     let mut p = Processor::new();
     p.add_path("arth")?;
+    println!("{:#?}", p);
     loop {
         let line = p.fetching();
         if line >= program.len() {

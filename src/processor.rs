@@ -40,13 +40,18 @@ impl Processor {
         self.pc
     }
     pub fn next_cycle(&mut self, inst: &str) -> Result<(), String> {
+        // Commit
         if let Some((tag, result)) = self.result_bus.take() {
             let val = result.val();
+
+            // Forward value to reservation stations
             for (_, station) in self.paths.iter_mut() {
                 station.forwarding(tag.clone(), val);
             }
+
             self.register_file.write(tag, val);
         }
+
         let inst = self.decoder.decode(inst)?;
         let args = inst.get_args();
         let mut arg_vals = Vec::with_capacity(args.len());
@@ -65,15 +70,14 @@ impl Processor {
 
         // Mapping arguments from types to data
         for arg in args[start..].iter() {
-            let val;
-            match *arg {
+            let val = match *arg {
                 ArgType::Reg(idx) => {
-                    val = self.register_file.read(idx);
+                    self.register_file.read(idx)
                 },
                 ArgType::Imm(imm) => {
-                    val = ArgVal::Ready(imm);
+                    ArgVal::Ready(imm)
                 },
-            }
+            };
             arg_vals.push(val);
         }
 
