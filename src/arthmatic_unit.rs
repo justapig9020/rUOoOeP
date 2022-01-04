@@ -54,7 +54,8 @@ impl ExecPath for Unit {
                 // execution done
                 self.exec = None;
             }
-        } else {
+        }
+        if self.exec.is_none() {
             if let Some((idx, inst)) = self.station.ready() {
                 let name = inst.inst;
                 let arg0 = inst.arg0.val().unwrap_or(0);
@@ -82,11 +83,11 @@ impl ExecPath for Unit {
 
 impl Unit {
     pub fn new() -> Self {
-        static mut cnt: usize = 0;
+        static mut CNT: usize = 0;
         // Safety: the cnt will only be used in this function
         let idx = unsafe {
-            cnt += 1;
-            cnt - 1
+            CNT += 1;
+            CNT - 1
         };
         Self {
             name: format!("arth{}", idx),
