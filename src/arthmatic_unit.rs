@@ -73,6 +73,9 @@ impl ExecPath for Unit {
             }
         }).collect();
         info.push_str(&into_table("Reservation station", slots));
+        if let Some(exec) = self.exec.as_ref() {
+            info.push_str(&format!("{}", exec));
+        }
         info
     }
 }
@@ -210,9 +213,16 @@ impl ArthInst {
 
 #[derive(Debug)]
 struct ExecUnit {
+    instruction: String,
     cycle: usize,
     tag: RStag,
     result: u32,
+}
+
+impl Display for ExecUnit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: Remain {} cycles, Destination: {}", self.instruction, self.cycle, self.tag)
+    }
 }
 
 impl ExecUnit {
@@ -222,6 +232,7 @@ impl ExecUnit {
             _ => (0, 0),
         };
         Self {
+            instruction: inst,
             cycle,
             tag,
             result,
