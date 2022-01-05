@@ -1,5 +1,5 @@
 use crate::decoder::{Decoder, DecodedInst, ArgType};
-use crate::execution_path::{execution_path_factory, ExecPath, ArgVal};
+use crate::execution_path::{execution_path_factory, ExecPath, ArgVal, RStag};
 use crate::register::RegFile;
 use std::collections::HashMap;
 use crate::result_bus::ResultBus;
@@ -48,18 +48,25 @@ impl Processor {
     pub fn fetching(&self) -> usize {
         self.pc
     }
-    pub fn next_cycle(&mut self, inst: &str) -> Result<(), String> {
-        // Commit
-        if let Some((tag, result)) = self.result_bus.take() {
-            let val = result.val();
-
-            // Forward value to reservation stations
+    fn commit(&mut self) -> bool {
+        let result = self.result_bus.take();
+        let forward = |(tag, val): (RStag, u32)| -> Option<(RStag, u32)>{
             for (_, station) in self.paths.iter_mut() {
                 station.forwarding(tag.clone(), val);
             }
+            Some((tag, val))
+        };
+        result.map(|(tag, result)| (tag, result.val()))
+            .and_then(forward)
+            .and_then(|(tag, val)|  {
+                self.register_file.write(tag, val);
+                Some(())
+            })
+            .is_some()
 
-            self.register_file.write(tag, val);
-        }
+    }
+    pub fn next_cycle(&mut self, inst: &str) -> Result<(), String> {
+        self.commit();
 
         let inst = self.decoder.decode(inst)?;
         let args = inst.args();
@@ -129,3 +136,4 @@ impl Processor {
         info
     }
 }
+
