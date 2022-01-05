@@ -75,7 +75,9 @@ impl ExecPath for Unit {
         }).collect();
         info.push_str(&into_table("Reservation station", slots));
         if let Some(exec) = self.exec.as_ref() {
-            info.push_str(&format!("{}", exec));
+            let exec = exec.to_string();
+            let table = into_table("Executing", vec![exec]);
+            info.push_str(&table);
         }
         info
     }

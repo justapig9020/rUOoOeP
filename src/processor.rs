@@ -132,7 +132,11 @@ impl Processor {
         let last_instruction = self.decoder.last_instruction().to_string();
         info.push_str(&into_table("Instruction", vec![last_instruction]));
         info.push_str(&into_table("Registers", registers));
-        self.paths.iter().for_each(|(_, p)| info.push_str(&p.dump()));
+        self.paths.iter().for_each(|(_, p)| {
+            info.push_str(&p.dump());
+            info.push('\n');
+        });
+        info.push_str(&format!("{:?}", self.result_bus));
         info
     }
 }
