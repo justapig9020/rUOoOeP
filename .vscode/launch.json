@@ -1,0 +1,45 @@
+{
+    // 使用 IntelliSense 以得知可用的屬性。
+    // 暫留以檢視現有屬性的描述。
+    // 如需詳細資訊，請瀏覽: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'advanced_pipeline'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=advanced_pipeline",
+                    "--package=advanced_pipeline"
+                ],
+                "filter": {
+                    "name": "advanced_pipeline",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'advanced_pipeline'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=advanced_pipeline",
+                    "--package=advanced_pipeline"
+                ],
+                "filter": {
+                    "name": "advanced_pipeline",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
