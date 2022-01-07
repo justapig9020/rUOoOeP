@@ -65,10 +65,10 @@ impl Processor {
             .is_some()
 
     }
-    pub fn next_cycle(&mut self, inst: &str) -> Result<(), String> {
+    pub fn next_cycle(&mut self, row_inst: &str) -> Result<(), String> {
         self.commit();
 
-        let inst = self.decoder.decode(inst)?;
+        let inst = self.decoder.decode(row_inst)?;
         let args = inst.args();
         let mut arg_vals = Vec::with_capacity(args.len());
         let mut start = 0;
