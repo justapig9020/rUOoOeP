@@ -116,12 +116,37 @@ impl Decoder {
         }
         Ok(())
     }
-    fn correspond_station(&self, inst_name: &str) -> Result<Vec<String>, String> {
+    fn station_of(&self, inst_name: &str) -> Result<Vec<String>, String> {
         self.stations.get(inst_name)
             .map(|list| {
                 let stations = list.station.borrow();
                 (*stations).clone()
             }).ok_or(String::from("No comresponding station"))
+    }
+    fn decode_args(arguments: &[&str], syntax: &[SyntaxType]) -> Result<(Vec<ArgType>, Option<ArgType>), String> {
+        let mut args = Vec::with_capacity(arguments.len());
+        let mut writeback = None;
+        for (token, expect_type) in arguments.iter().zip(syntax.iter()) {
+            let arg = arg_scan(token)?;
+            let get_type = SyntaxType::from(arg);
+            if !get_type.matches(expect_type) {
+                let msg = format!("Expect type {:?}, but get type {:?}", *expect_type, get_type);
+                return Err(msg);
+            }
+            if let SyntaxType::Writeback = *expect_type {
+                writeback = Some(arg);
+            } else {
+                args.push(arg);
+            }
+        }
+        Ok((args, writeback))
+    }
+    fn syntax_of(&self, inst_name: &str) -> Result<&[SyntaxType], String> {
+        let format = self.formats
+            .get(inst_name)
+            .ok_or(format!("Instruct {} has not implemented", inst))?;
+        let syntax = &format.syntax;
+        Ok(syntax)
     }
     pub fn decode(&mut self, inst: &str) -> Result<DecodedInst, String> {
         self.instruction = String::from(inst);
@@ -134,28 +159,15 @@ impl Decoder {
         let inst_name = tokens[0];
         let arguments = &tokens[1..];
 
-        let stations = self.correspond_station(inst_name)?;
-
-        let format = self.formats
-            .get(inst_name)
-            .ok_or(format!("Instruct {} has not implemented", inst))?;
-        let mut args = Vec::with_capacity(tokens.len() - 1);
-        let syntax = &format.syntax;
-        for (token, expect_type) in arguments.iter().zip(syntax.iter()) {
-            let arg = arg_scan(token)?;
-            let get_type = SyntaxType::from(arg);
-            if !get_type.matches(expect_type) {
-                let msg = format!("Expect type {:?}, but get type {:?}", *expect_type, get_type);
-                return Err(msg);
-            }
-            args.push(arg);
-        }
+        let stations = self.station_of(inst_name)?;
+        let syntax = self.syntax_of(inst_name)?;
+        let (args, writeback) = Decoder::decode_args(arguments, syntax)?;
 
         Ok(DecodedInst {
             name: inst_name.to_string(),
             stations,
             args,
-            writeback: format.writeback,
+            writeback,
         })
     }
     pub fn last_instruction(&self) -> &str {
@@ -230,7 +242,7 @@ pub struct DecodedInst {
     name: String,
     stations: Vec<String>,
     args: Vec<ArgType>,
-    writeback: bool,
+    writeback: Option<ArgType>,
 }
 
 impl DecodedInst {
@@ -244,7 +256,7 @@ impl DecodedInst {
         &self.args
     }
     pub fn is_writeback(&self) -> bool {
-        self.writeback
+        self.writeback.is_some()
     }
 }
 
