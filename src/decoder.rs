@@ -144,14 +144,14 @@ impl Decoder {
         for (token, expect_type) in arguments.iter().zip(syntax.iter()) {
             let arg = arg_scan(token)?;
             let get_type = SyntaxType::from(arg);
-            if *expect_type != get_type {
+            if !get_type.matches(expect_type) {
                 let msg = format!("Expect type {:?}, but get type {:?}", *expect_type, get_type);
                 return Err(msg);
             }
             args.push(arg);
         }
 
-        return Ok(DecodedInst {
+        Ok(DecodedInst {
             name: inst_name.to_string(),
             stations,
             args,
@@ -254,9 +254,45 @@ pub enum ArgType {
     Imm(u32),
 }
 
+#[cfg(test)]
+mod syntaxtype_test {
+    use super::SyntaxType;
+    #[test]
+    fn Sametype() {
+        let a = SyntaxType::Immediate;
+        let b = SyntaxType::Immediate;
+        assert!(a.matches(&b));
+    }
+    #[test]
+    fn Register_Writeback() {
+        let a = SyntaxType::Register;
+        let b = SyntaxType::Writeback;
+        assert!(a.matches(&b));
+    }
+    #[test]
+    fn Writeback_Register() {
+        let a = SyntaxType::Writeback;
+        let b = SyntaxType::Register;
+        assert!(a.matches(&b));
+    }
+    #[test]
+    fn Register_Immediate() {
+        let a = SyntaxType::Register;
+        let b = SyntaxType::Immediate;
+        assert!(!a.matches(&b));
+    }
+    #[test]
+    fn Writeback_Immediate() {
+        let a = SyntaxType::Writeback;
+        let b = SyntaxType::Immediate;
+        assert!(!a.matches(&b));
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum SyntaxType {
     Register,
+    Writeback,
     Immediate,
 }
 
@@ -265,6 +301,15 @@ impl SyntaxType {
         match arg {
             ArgType::Reg(_) => SyntaxType::Register,
             ArgType::Imm(_) => SyntaxType::Immediate,
+        }
+    }
+    fn matches(&self, other: &Self) -> bool {
+        use SyntaxType::*;
+        match (self, other) {
+            (Register, Writeback) => true,
+            (Writeback, Register) => true,
+            (s, o) if s == o => true,
+            (_, _) => false,
         }
     }
 }
