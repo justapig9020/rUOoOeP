@@ -30,7 +30,7 @@ fn main() -> Result<(), String> {
     let mut p = Processor::new();
     p.add_path("arth")?;
     loop {
-        let line = p.fetching();
+        let line = p.fetch_address();
         if line >= program.len() {
             break;
         }

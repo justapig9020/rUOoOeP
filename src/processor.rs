@@ -50,9 +50,13 @@ impl Processor {
             self.decoder.register(insts, name)
         }
     }
-    pub fn fetching(&self) -> usize {
+    /// Return fetching address.
+    pub fn fetch_address(&self) -> usize {
         self.pc
     }
+    /// Commit result and forward to reservation stations.
+    /// If result bus is holding data to commit, then return `True`.
+    /// Otherwise, return `False`.
     fn commit(&mut self) -> bool {
         let result = self.result_bus.take();
         let forward = |(tag, val): (RStag, u32)| -> Option<(RStag, u32)> {
@@ -70,18 +74,24 @@ impl Processor {
             })
             .is_some()
     }
+    /// If issuable reservation found, the instruction issued and [IssueResult::Issued].
+    /// Otherwise [IssueResult::Stall] returned.
     fn try_issue(&mut self, inst: &DecodedInst, arg_vals: &[ArgVal]) -> IssueResult {
-        for name in inst.stations().iter() {
-            // Find a reservation station by name
-            if let Some(station) = self.paths.get_mut(name) {
-                if let Ok(tag) = station.issue(inst.name(), arg_vals) {
-                    // The instruction has been issued.
+        let name_of_stations = inst.stations();
+        for name in name_of_stations.iter() {
+            let station = self.paths.get_mut(name);
+            if let Some(station) = station {
+                let slot_tag = station.issue(inst.name(), arg_vals);
+                if let Ok(tag) = slot_tag {
                     return IssueResult::Issued(tag);
                 }
             }
         }
+        // Issuable reservation not found
         IssueResult::Stall
     }
+    /// If instruction writeback, Rename destination register to tag of reservation station slot which holds the instruction.
+    /// Otherwise, do nothing.
     fn register_renaming(&mut self, tag: RStag, inst: DecodedInst) -> Result<(), String> {
         let mut ret = Ok(());
         if let Some(dest) = inst.writeback() {
@@ -95,6 +105,7 @@ impl Processor {
         }
         ret
     }
+    /// Return Err(`Error Message`) if error occur.
     pub fn next_cycle(&mut self, row_inst: &str) -> Result<(), String> {
         let mut next_pc = self.pc;
         self.commit();
@@ -112,7 +123,6 @@ impl Processor {
             arg_vals.push(val);
         }
 
-        // Searching for a suitable station to issue the instruction
         let result = self.try_issue(&inst, &arg_vals);
         if let IssueResult::Issued(tag) = result {
             next_pc += 1;
