@@ -21,16 +21,14 @@ impl ExecPath for Unit {
     fn list_inst(&self) -> Vec<InstFormat> {
         vec![
             InstFormat::create("add")
+                .add_syntax(SyntaxType::Writeback)
                 .add_syntax(SyntaxType::Register)
                 .add_syntax(SyntaxType::Register)
-                .add_syntax(SyntaxType::Register)
-                .set_writeback(true)
                 .done(),
             InstFormat::create("addi")
-                .add_syntax(SyntaxType::Register)
+                .add_syntax(SyntaxType::Writeback)
                 .add_syntax(SyntaxType::Register)
                 .add_syntax(SyntaxType::Immediate)
-                .set_writeback(true)
                 .done(),]
     }
     fn forwarding(&mut self, tag: RStag, val: u32) {

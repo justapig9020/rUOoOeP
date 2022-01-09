@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -19,16 +19,16 @@ mod decoder {
         use SyntaxType::*;
         let mut d = Decoder::new();
         let test_inst = vec![
-        InstFormat {
-            name: String::from("add"),
-            syntax: vec![Register, Register, Register],
-            writeback: true,
-        },
-        InstFormat {
-            name: String::from("addi"),
-            syntax: vec![Register, Register, Immediate],
-            writeback: false,
-        },
+            InstFormat {
+                name: String::from("add"),
+                syntax: vec![Register, Register, Register],
+                writeback: true,
+            },
+            InstFormat {
+                name: String::from("addi"),
+                syntax: vec![Register, Register, Immediate],
+                writeback: false,
+            },
         ];
         let station0 = String::from("station0");
         let station1 = String::from("station1");
@@ -80,7 +80,11 @@ mod decoder {
             writeback: true,
         }];
         let station = String::from("station");
-        let _args = vec![String::from("r0"), String::from("R13"), String::from("#100")];
+        let _args = vec![
+            String::from("r0"),
+            String::from("R13"),
+            String::from("#100"),
+        ];
         let to_decode = String::from("add R0, R13, 100");
         d.register(inst, station.clone()).unwrap();
 
@@ -117,20 +121,28 @@ impl Decoder {
         Ok(())
     }
     fn station_of(&self, inst_name: &str) -> Result<Vec<String>, String> {
-        self.stations.get(inst_name)
+        self.stations
+            .get(inst_name)
             .map(|list| {
                 let stations = list.station.borrow();
                 (*stations).clone()
-            }).ok_or(String::from("No comresponding station"))
+            })
+            .ok_or(String::from("No comresponding station"))
     }
-    fn decode_args(arguments: &[&str], syntax: &[SyntaxType]) -> Result<(Vec<ArgType>, Option<ArgType>), String> {
+    fn decode_args(
+        arguments: &[&str],
+        syntax: &[SyntaxType],
+    ) -> Result<(Vec<ArgType>, Option<ArgType>), String> {
         let mut args = Vec::with_capacity(arguments.len());
         let mut writeback = None;
         for (token, expect_type) in arguments.iter().zip(syntax.iter()) {
             let arg = arg_scan(token)?;
             let get_type = SyntaxType::from(arg);
             if !get_type.matches(expect_type) {
-                let msg = format!("Expect type {:?}, but get type {:?}", *expect_type, get_type);
+                let msg = format!(
+                    "Expect type {:?}, but get type {:?}",
+                    *expect_type, get_type
+                );
                 return Err(msg);
             }
             if let SyntaxType::Writeback = *expect_type {
@@ -142,9 +154,10 @@ impl Decoder {
         Ok((args, writeback))
     }
     fn syntax_of(&self, inst_name: &str) -> Result<&[SyntaxType], String> {
-        let format = self.formats
+        let format = self
+            .formats
             .get(inst_name)
-            .ok_or(format!("Instruct {} has not implemented", inst))?;
+            .ok_or(format!("Instruct {} has not implemented", inst_name))?;
         let syntax = &format.syntax;
         Ok(syntax)
     }
@@ -224,17 +237,11 @@ struct StationList {
 impl StationList {
     fn new(name: &String) -> Self {
         Self {
-            station: Rc::new(
-                         RefCell::new(
-                             vec![name.clone()]
-                             )),
+            station: Rc::new(RefCell::new(vec![name.clone()])),
         }
     }
     fn push(&mut self, name: &String) {
-        self
-            .station
-            .borrow_mut()
-            .push(name.clone());
+        self.station.borrow_mut().push(name.clone());
     }
 }
 
@@ -255,8 +262,8 @@ impl DecodedInst {
     pub fn args<'a>(&'a self) -> &'a Vec<ArgType> {
         &self.args
     }
-    pub fn is_writeback(&self) -> bool {
-        self.writeback.is_some()
+    pub fn writeback(&self) -> Option<ArgType> {
+        self.writeback
     }
 }
 
@@ -354,12 +361,7 @@ impl InstFormatCreater {
         self.body.syntax.push(syn_type);
         self
     }
-    pub fn set_writeback(mut self, w: bool) -> Self {
-        self.body.writeback = w;
-        self
-    }
     pub fn done(self) -> InstFormat {
         self.body
     }
 }
-

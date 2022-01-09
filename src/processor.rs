@@ -1,9 +1,9 @@
-use crate::decoder::{Decoder, DecodedInst, ArgType};
-use crate::execution_path::{execution_path_factory, ExecPath, ArgVal, RStag};
-use crate::register::RegFile;
-use std::collections::HashMap;
-use crate::result_bus::ResultBus;
+use crate::decoder::{ArgType, DecodedInst, Decoder, SyntaxType};
 use crate::display::into_table;
+use crate::execution_path::{execution_path_factory, ArgVal, ExecPath, RStag};
+use crate::register::RegFile;
+use crate::result_bus::ResultBus;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug)]
@@ -50,20 +50,20 @@ impl Processor {
     }
     fn commit(&mut self) -> bool {
         let result = self.result_bus.take();
-        let forward = |(tag, val): (RStag, u32)| -> Option<(RStag, u32)>{
+        let forward = |(tag, val): (RStag, u32)| -> Option<(RStag, u32)> {
             for (_, station) in self.paths.iter_mut() {
                 station.forwarding(tag.clone(), val);
             }
             Some((tag, val))
         };
-        result.map(|(tag, result)| (tag, result.val()))
+        result
+            .map(|(tag, result)| (tag, result.val()))
             .and_then(forward)
-            .and_then(|(tag, val)|  {
+            .and_then(|(tag, val)| {
                 self.register_file.write(tag, val);
                 Some(())
             })
             .is_some()
-
     }
     pub fn next_cycle(&mut self, row_inst: &str) -> Result<(), String> {
         self.commit();
@@ -71,28 +71,12 @@ impl Processor {
         let inst = self.decoder.decode(row_inst)?;
         let args = inst.args();
         let mut arg_vals = Vec::with_capacity(args.len());
-        let mut start = 0;
-        let mut dest = None;
-        if inst.is_writeback() {
-            if args.len() == 0 {
-                let msg = String::from("Expcet more than one argument");
-                return Err(msg);
-            }
-            if let ArgType::Reg(idx) = args[0]{
-                start = 1;
-                dest = Some(idx);
-            }
-        }
 
         // Mapping arguments from types to data
-        for arg in args[start..].iter() {
+        for arg in args.iter() {
             let val = match *arg {
-                ArgType::Reg(idx) => {
-                    self.register_file.read(idx)
-                },
-                ArgType::Imm(imm) => {
-                    ArgVal::Ready(imm)
-                },
+                ArgType::Reg(idx) => self.register_file.read(idx),
+                ArgType::Imm(imm) => ArgVal::Ready(imm),
             };
             arg_vals.push(val);
         }
@@ -103,8 +87,14 @@ impl Processor {
             // Find a reservation station by name
             if let Some(station) = self.paths.get_mut(name) {
                 if let Ok(tag) = station.issue(inst.name(), &arg_vals) {
-                    if let Some(idx) = dest {
-                        self.register_file.rename(idx, tag);
+                    if let Some(dest_type) = inst.writeback() {
+                        match dest_type {
+                            ArgType::Reg(idx) => self.register_file.rename(idx, tag),
+                            _ => {
+                                let msg = format!("{:?} is not a valid write back destination", dest_type);
+                                return Err(msg);
+                            }
+                        };
                     }
                     // The instruction has been issued.
                     issued = true;
@@ -140,4 +130,3 @@ impl Processor {
         info
     }
 }
-
