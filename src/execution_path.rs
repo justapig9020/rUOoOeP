@@ -1,8 +1,8 @@
 use crate::arthmatic_unit;
-use std::clone::Clone;
-use std::cmp::PartialEq;
 use crate::decoder::InstFormat;
 use crate::result_bus::ResultBus;
+use std::clone::Clone;
+use std::cmp::PartialEq;
 use std::fmt::{self, Debug, Display};
 
 #[derive(Debug, Clone)]
@@ -16,10 +16,8 @@ impl Display for ArgVal {
         let content = match self {
             ArgVal::Waiting(tag) => {
                 format!("{}", tag)
-            },
-            ArgVal::Ready(val) => {
-                val.to_string()
             }
+            ArgVal::Ready(val) => val.to_string(),
         };
         write!(f, "{}", content)
     }
@@ -47,8 +45,7 @@ impl Display for RStag {
 }
 impl PartialEq for RStag {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name &&
-        self.slot == other.slot
+        self.name == other.name && self.slot == other.slot
     }
 }
 
@@ -94,7 +91,7 @@ pub trait ExecPath: Debug {
     fn get_func(&self) -> String;
     fn list_inst(&self) -> Vec<InstFormat>;
     fn forwarding(&mut self, tag: RStag, val: u32);
-    fn issue(&mut self, inst: String, vals:&[ArgVal]) -> Result<RStag, ()>;
+    fn issue(&mut self, inst: String, vals: &[ArgVal]) -> Result<RStag, ()>;
     fn next_cycle(&mut self, bus: &mut ResultBus);
     fn dump(&self) -> String;
 }

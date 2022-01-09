@@ -1,11 +1,11 @@
+mod arthmatic_unit;
+mod decoder;
+mod display;
 mod execution_path;
 mod graph;
-mod register;
-mod decoder;
 mod processor;
+mod register;
 mod result_bus;
-mod arthmatic_unit;
-mod display;
 use processor::Processor;
 use std::io;
 

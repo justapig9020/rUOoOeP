@@ -1,4 +1,4 @@
-use crate::execution_path::{RStag, ArgVal};
+use crate::execution_path::{ArgVal, RStag};
 use std::default::Default;
 
 #[derive(Default, Debug)]
@@ -14,10 +14,7 @@ struct Entry {
 
 impl Default for Entry {
     fn default() -> Self {
-        Self {
-            val: 0,
-            tag: None,
-        }
+        Self { val: 0, tag: None }
     }
 }
 
@@ -58,8 +55,7 @@ mod regfile {
         let tag_write = RStag::new("name", 2);
         let to_not_match = 5;
         let write_val = 100;
-        rf.entry[to_not_match].tag
-            = Some(tag_set);
+        rf.entry[to_not_match].tag = Some(tag_set);
 
         rf.write(tag_write, write_val);
 
@@ -105,10 +101,8 @@ impl RegFile {
             let content = match reg.tag.as_ref() {
                 Some(tag) => {
                     format!("{}", tag)
-                },
-                None => {
-                    reg.val.to_string()
                 }
+                None => reg.val.to_string(),
             };
             ret.push(content);
         }
