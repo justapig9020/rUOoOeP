@@ -91,7 +91,10 @@ impl Processor {
                         match dest_type {
                             ArgType::Reg(idx) => self.register_file.rename(idx, tag),
                             _ => {
-                                let msg = format!("{:?} is not a valid write back destination", dest_type);
+                                let msg = format!(
+                                    "{:?} is not a valid write back destination",
+                                    dest_type
+                                );
                                 return Err(msg);
                             }
                         };

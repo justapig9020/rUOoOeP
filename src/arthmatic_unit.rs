@@ -1,7 +1,7 @@
-use crate::execution_path::{ RStag, ExecPath, ArgVal, ExecResult};
-use crate::decoder::{ InstFormat, InstFormatCreater , SyntaxType};
-use crate::result_bus::ResultBus;
+use crate::decoder::{InstFormat, InstFormatCreater, SyntaxType};
 use crate::display::into_table;
+use crate::execution_path::{ArgVal, ExecPath, ExecResult, RStag};
+use crate::result_bus::ResultBus;
 use std::fmt::{self, Display};
 
 #[derive(Debug)]
@@ -29,7 +29,8 @@ impl ExecPath for Unit {
                 .add_syntax(SyntaxType::Writeback)
                 .add_syntax(SyntaxType::Register)
                 .add_syntax(SyntaxType::Immediate)
-                .done(),]
+                .done(),
+        ]
     }
     fn forwarding(&mut self, tag: RStag, val: u32) {
         let inst_from = tag.station();
@@ -39,11 +40,14 @@ impl ExecPath for Unit {
         }
         self.station.forwarding(&tag, val);
     }
-    fn issue(&mut self, inst: String, vals:&[ArgVal]) -> Result<RStag, ()> {
-        self.station.insert(inst, vals).map(|idx| {
-            let tag = RStag::new(&self.name, idx);
-            tag
-        }).ok_or(())
+    fn issue(&mut self, inst: String, vals: &[ArgVal]) -> Result<RStag, ()> {
+        self.station
+            .insert(inst, vals)
+            .map(|idx| {
+                let tag = RStag::new(&self.name, idx);
+                tag
+            })
+            .ok_or(())
     }
     fn next_cycle(&mut self, bus: &mut ResultBus) {
         if let Some(unit) = self.exec.as_mut() {
@@ -65,12 +69,15 @@ impl ExecPath for Unit {
     }
     fn dump(&self) -> String {
         let mut info = format!("{}\n", self.name);
-        let slots: Vec<String> = self.station.slots.iter().map(|slot| {
-            match slot.as_ref() {
+        let slots: Vec<String> = self
+            .station
+            .slots
+            .iter()
+            .map(|slot| match slot.as_ref() {
                 Some(c) => format!("{}", c),
-                None => String::from("None")
-            }
-        }).collect();
+                None => String::from("None"),
+            })
+            .collect();
         info.push_str(&into_table("Reservation station", slots));
         if let Some(exec) = self.exec.as_ref() {
             let exec = exec.to_string();
@@ -222,7 +229,11 @@ struct ExecUnit {
 
 impl Display for ExecUnit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: Remain {} cycles, Destination: {}", self.instruction, self.cycle, self.tag)
+        write!(
+            f,
+            "{}: Remain {} cycles, Destination: {}",
+            self.instruction, self.cycle, self.tag
+        )
     }
 }
 
