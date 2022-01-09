@@ -6,6 +6,11 @@ use crate::result_bus::ResultBus;
 use std::collections::HashMap;
 use std::fmt;
 
+enum IssueResult {
+    Issued(RStag),
+    Stall,
+}
+
 #[derive(Debug)]
 pub struct Processor {
     pc: usize,
@@ -65,7 +70,33 @@ impl Processor {
             })
             .is_some()
     }
+    fn try_issue(&mut self, inst: &DecodedInst, arg_vals: &[ArgVal]) -> IssueResult {
+        for name in inst.stations().iter() {
+            // Find a reservation station by name
+            if let Some(station) = self.paths.get_mut(name) {
+                if let Ok(tag) = station.issue(inst.name(), arg_vals) {
+                    // The instruction has been issued.
+                    return IssueResult::Issued(tag);
+                }
+            }
+        }
+        IssueResult::Stall
+    }
+    fn register_renaming(&mut self, tag: RStag, inst: DecodedInst) -> Result<(), String> {
+        let mut ret = Ok(());
+        if let Some(dest) = inst.writeback() {
+            match dest {
+                ArgType::Reg(idx) => self.register_file.rename(idx, tag),
+                _ => {
+                    let msg = format!("{:?} is not a valid write back destination", dest);
+                    ret = Err(msg);
+                }
+            };
+        }
+        ret
+    }
     pub fn next_cycle(&mut self, row_inst: &str) -> Result<(), String> {
+        let mut next_pc = self.pc;
         self.commit();
 
         let inst = self.decoder.decode(row_inst)?;
@@ -81,40 +112,18 @@ impl Processor {
             arg_vals.push(val);
         }
 
-        let mut issued = false;
         // Searching for a suitable station to issue the instruction
-        for name in inst.stations().iter() {
-            // Find a reservation station by name
-            if let Some(station) = self.paths.get_mut(name) {
-                if let Ok(tag) = station.issue(inst.name(), &arg_vals) {
-                    if let Some(dest_type) = inst.writeback() {
-                        match dest_type {
-                            ArgType::Reg(idx) => self.register_file.rename(idx, tag),
-                            _ => {
-                                let msg = format!(
-                                    "{:?} is not a valid write back destination",
-                                    dest_type
-                                );
-                                return Err(msg);
-                            }
-                        };
-                    }
-                    // The instruction has been issued.
-                    issued = true;
-                    break;
-                }
-            }
+        let result = self.try_issue(&inst, &arg_vals);
+        if let IssueResult::Issued(tag) = result {
+            next_pc += 1;
+            self.register_renaming(tag, inst)?;
         }
 
         for (_, exec_unit) in self.paths.iter_mut() {
             exec_unit.next_cycle(&mut self.result_bus);
         }
 
-        // If the instruction not issued, stall the instruction fetch
-        // untill there are some reservation station is ready.
-        if issued {
-            self.pc += 1;
-        }
+        self.pc = next_pc;
         Ok(())
     }
     fn print(&self) -> String {
