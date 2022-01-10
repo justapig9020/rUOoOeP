@@ -67,6 +67,9 @@ impl ExecPath for Unit {
             }
         }
     }
+    fn pending(&self) -> usize {
+        self.station.pending()
+    }
     fn dump(&self) -> String {
         let mut info = format!("{}\n", self.name);
         let slots: Vec<String> = self
@@ -113,14 +116,33 @@ struct ReservationStation {
     just_issued: Option<usize>,
 }
 
+#[cfg(test)]
+mod resrvation_station {
+    use super::*;
+
+    fn new_instruction() -> (String, &'static [ArgState]) {
+        (
+            String::from("inst"),
+            &[ArgState::Ready(1), ArgState::Ready(2)],
+        )
+    }
+    #[test]
+    fn pending() {
+        let size = 10;
+        let mut station = ReservationStation::new(size);
+        let inst_cnt = 5;
+        for _ in 0..inst_cnt {
+            let (inst, args) = new_instruction();
+            station.insert(inst, args);
+        }
+        assert_eq!(inst_cnt, station.pending());
+    }
+}
+
 impl ReservationStation {
     fn new(size: usize) -> Self {
-        let mut slots = Vec::with_capacity(size);
-        for _ in 0..size {
-            slots.push(None);
-        }
         Self {
-            slots,
+            slots: (0..size).map(|_| None).collect(),
             just_issued: None,
         }
     }
@@ -180,6 +202,9 @@ impl ReservationStation {
                 slot.forwarding(tag, val);
             }
         }
+    }
+    fn pending(&self) -> usize {
+        self.slots.iter().map(|a| a.is_some() as usize).sum()
     }
 }
 

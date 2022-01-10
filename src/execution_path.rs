@@ -107,6 +107,8 @@ pub trait ExecPath: Debug {
     /// Otherwise, [Err] returned.
     fn try_issue(&mut self, inst: String, vals: &[ArgState]) -> Result<RStag, ()>;
     fn next_cycle(&mut self, bus: &mut ResultBus);
+    /// Return pending instruction count
+    fn pending(&self) -> usize;
     fn dump(&self) -> String;
 }
 
