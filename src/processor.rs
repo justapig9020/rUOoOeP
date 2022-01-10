@@ -1,4 +1,4 @@
-use crate::decoder::{ArgType, DecodedInst, Decoder, SyntaxType};
+use crate::decoder::{ArgType, DecodedInst, Decoder};
 use crate::display::into_table;
 use crate::execution_path::{execution_path_factory, ArgVal, ExecPath, RStag};
 use crate::register::RegFile;
@@ -111,7 +111,7 @@ impl Processor {
         self.commit();
 
         let inst = self.decoder.decode(row_inst)?;
-        let args = inst.args();
+        let args = inst.arguments();
         let mut arg_vals = Vec::with_capacity(args.len());
 
         // Mapping arguments from types to data

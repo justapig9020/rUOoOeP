@@ -1,4 +1,4 @@
-use crate::decoder::{InstFormat, InstFormatCreater, SyntaxType};
+use crate::decoder::{InstFormat, InstFormatCreater, TokenType};
 use crate::display::into_table;
 use crate::execution_path::{ArgVal, ExecPath, ExecResult, RStag};
 use crate::result_bus::ResultBus;
@@ -21,14 +21,14 @@ impl ExecPath for Unit {
     fn list_inst(&self) -> Vec<InstFormat> {
         vec![
             InstFormat::create("add")
-                .add_syntax(SyntaxType::Writeback)
-                .add_syntax(SyntaxType::Register)
-                .add_syntax(SyntaxType::Register)
+                .add_syntax(TokenType::Writeback)
+                .add_syntax(TokenType::Register)
+                .add_syntax(TokenType::Register)
                 .done(),
             InstFormat::create("addi")
-                .add_syntax(SyntaxType::Writeback)
-                .add_syntax(SyntaxType::Register)
-                .add_syntax(SyntaxType::Immediate)
+                .add_syntax(TokenType::Writeback)
+                .add_syntax(TokenType::Register)
+                .add_syntax(TokenType::Immediate)
                 .done(),
         ]
     }
