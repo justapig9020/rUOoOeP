@@ -78,8 +78,22 @@ impl Processor {
     /// Otherwise [IssueResult::Stall] returned.
     fn try_issue(&mut self, inst: &DecodedInst, renamed_args: &[ArgState]) -> IssueResult {
         let name_of_stations = inst.stations();
-        for name in name_of_stations.iter() {
-            let station = self.paths.get_mut(name);
+        // Order stations by pending instruction count.
+        // Therefore, instructions can be execute more parallelly.
+        let mut stations = name_of_stations
+            .iter()
+            .map(|name| {
+                let station = self
+                    .paths
+                    .get(name)
+                    .unwrap_or_else(|| panic!("Station '{}' not found", name));
+                (name, station.pending())
+            })
+            .collect::<Vec<(&String, usize)>>();
+        stations.sort_by_key(|(_, p)| *p);
+
+        for (name, _) in stations.iter() {
+            let station = self.paths.get_mut(*name);
             if let Some(station) = station {
                 let slot_tag = station.try_issue(inst.name(), renamed_args);
                 if let Ok(tag) = slot_tag {
