@@ -7,7 +7,7 @@ use std::fmt::{self, Display};
 #[derive(Debug)]
 pub struct Unit {
     name: String,
-    station: RStation,
+    station: ReservationStation,
     exec: Option<ExecUnit>,
 }
 
@@ -98,14 +98,14 @@ impl Unit {
         };
         Self {
             name: format!("arth{}", idx),
-            station: RStation::new(5),
+            station: ReservationStation::new(5),
             exec: None,
         }
     }
 }
 
 #[derive(Debug)]
-struct RStation {
+struct ReservationStation {
     slots: Vec<Option<ArthInst>>,
     /// Due to the instruction can not go into execution in the cycle it just
     /// commit.
@@ -113,7 +113,7 @@ struct RStation {
     just_issued: Option<usize>,
 }
 
-impl RStation {
+impl ReservationStation {
     fn new(size: usize) -> Self {
         let mut slots = Vec::with_capacity(size);
         for _ in 0..size {
@@ -146,6 +146,7 @@ impl RStation {
     }
     /// Find a ready instruction.
     /// If found, remove it from reservation station and return it.
+    /// The return value is composed of (index of slot, intruction).
     /// Otherwise, return None.
     fn ready(&mut self) -> Option<(usize, ArthInst)> {
         let skip = if let Some(idx) = self.just_issued {
@@ -198,12 +199,8 @@ impl Display for ArthInst {
 impl ArthInst {
     /// An instruction is ready if it's not waiting result of another instruction.
     fn is_ready(&self) -> bool {
-        if let ArgState::Ready(_) = self.arg0 {
-            if let ArgState::Ready(_) = self.arg1 {
-                return true;
-            }
-        }
-        false
+        use ArgState::Ready;
+        matches!(self.arg0, Ready(_)) && matches!(self.arg1, Ready(_))
     }
     fn forwarding(&mut self, tag: &RStag, val: u32) {
         if let ArgState::Waiting(wait) = self.arg0.clone() {
@@ -254,11 +251,7 @@ impl ExecUnit {
         if self.cycle == 0 {
             let tag = self.tag.clone();
             let result = ExecResult::Arth(self.result);
-            if bus.set(tag, result) {
-                true
-            } else {
-                false
-            }
+            bus.set(tag, result)
         } else {
             self.cycle -= 1;
             false
