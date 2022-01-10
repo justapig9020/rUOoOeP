@@ -5,33 +5,40 @@ use std::clone::Clone;
 use std::cmp::PartialEq;
 use std::fmt::{self, Debug, Display};
 
+/// State of argument of reservation stations
+/// There are two states
+/// 1. Waiting(tag): waiting for reault of `tag` to resolve dependency.
+/// 2. Ready(value): all dependencies have been resolve and ready to go.
 #[derive(Debug, Clone)]
-pub enum ArgVal {
+pub enum ArgState {
     Waiting(RStag),
     Ready(u32),
 }
 
-impl Display for ArgVal {
+impl Display for ArgState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let content = match self {
-            ArgVal::Waiting(tag) => {
+            ArgState::Waiting(tag) => {
                 format!("{}", tag)
             }
-            ArgVal::Ready(val) => val.to_string(),
+            ArgState::Ready(val) => val.to_string(),
         };
         write!(f, "{}", content)
     }
 }
 
-impl ArgVal {
+impl ArgState {
+    /// If argument is ready return value of the argument.
+    /// Otherwise, return None.
     pub fn val(&self) -> Option<u32> {
         match self {
-            ArgVal::Waiting(_) => None,
-            ArgVal::Ready(val) => Some(*val),
+            ArgState::Waiting(_) => None,
+            ArgState::Ready(val) => Some(*val),
         }
     }
 }
 
+/// Tag of Reservation station and slot.
 #[derive(Debug)]
 pub struct RStag {
     name: String,
@@ -65,6 +72,7 @@ impl RStag {
             slot,
         }
     }
+    /// Return the name of execute path of the station.
     pub fn station(&self) -> String {
         self.name.clone()
     }
@@ -87,15 +95,22 @@ impl ExecResult {
 }
 
 pub trait ExecPath: Debug {
-    fn get_name(&self) -> String;
-    fn get_func(&self) -> String;
-    fn list_inst(&self) -> Vec<InstFormat>;
-    fn forwarding(&mut self, tag: RStag, val: u32);
-    fn issue(&mut self, inst: String, vals: &[ArgVal]) -> Result<RStag, ()>;
+    fn name(&self) -> String;
+    /// Return name of class of fucntional unit.
+    fn function(&self) -> String;
+    /// List all instructions that implemented by the path.
+    fn list_insts(&self) -> Vec<InstFormat>;
+    /// Forward result to reservation station to resolve dependency.
+    fn forward(&mut self, tag: RStag, val: u32);
+    /// Issue a instruction to the execution path.
+    /// On success, [Ok] with tag of issued reservation station returned.
+    /// Otherwise, [Err] returned.
+    fn try_issue(&mut self, inst: String, vals: &[ArgState]) -> Result<RStag, ()>;
     fn next_cycle(&mut self, bus: &mut ResultBus);
     fn dump(&self) -> String;
 }
 
+/// Generate a execution path by name of functional unit
 pub fn execution_path_factory(func: &str) -> Result<Box<dyn ExecPath>, String> {
     match func {
         "arth" => {

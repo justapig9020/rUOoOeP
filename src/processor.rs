@@ -1,6 +1,6 @@
 use crate::decoder::{ArgType, DecodedInst, Decoder};
 use crate::display::into_table;
-use crate::execution_path::{execution_path_factory, ArgVal, ExecPath, RStag};
+use crate::execution_path::{execution_path_factory, ArgState, ExecPath, RStag};
 use crate::register::RegisterFile;
 use crate::result_bus::ResultBus;
 use std::collections::HashMap;
@@ -40,11 +40,11 @@ impl Processor {
     /// Add an execution path to the processor.
     pub fn add_path(&mut self, func: &str) -> Result<(), String> {
         let path = execution_path_factory(&func)?;
-        let insts = path.list_inst();
-        let name = path.get_name();
+        let insts = path.list_insts();
+        let name = path.name();
 
         if let Some(prev) = self.paths.insert(name.clone(), path) {
-            let msg = format!("Already has a execution path with name {}", prev.get_name());
+            let msg = format!("Already has a execution path with name {}", prev.name());
             Err(msg)
         } else {
             self.decoder.register(insts, name)
@@ -61,7 +61,7 @@ impl Processor {
         let result = self.result_bus.take();
         let forward = |(tag, val): (RStag, u32)| -> Option<(RStag, u32)> {
             for (_, station) in self.paths.iter_mut() {
-                station.forwarding(tag.clone(), val);
+                station.forward(tag.clone(), val);
             }
             Some((tag, val))
         };
@@ -76,12 +76,12 @@ impl Processor {
     }
     /// If issuable reservation found, the instruction issued and [IssueResult::Issued].
     /// Otherwise [IssueResult::Stall] returned.
-    fn try_issue(&mut self, inst: &DecodedInst, arg_vals: &[ArgVal]) -> IssueResult {
+    fn try_issue(&mut self, inst: &DecodedInst, renamed_args: &[ArgState]) -> IssueResult {
         let name_of_stations = inst.stations();
         for name in name_of_stations.iter() {
             let station = self.paths.get_mut(name);
             if let Some(station) = station {
-                let slot_tag = station.issue(inst.name(), arg_vals);
+                let slot_tag = station.try_issue(inst.name(), renamed_args);
                 if let Ok(tag) = slot_tag {
                     return IssueResult::Issued(tag);
                 }
@@ -112,18 +112,18 @@ impl Processor {
 
         let inst = self.decoder.decode(row_inst)?;
         let args = inst.arguments();
-        let mut arg_vals = Vec::with_capacity(args.len());
+        let mut renamed_args = Vec::with_capacity(args.len());
 
         // Mapping arguments from types to data
         for arg in args.iter() {
             let val = match *arg {
                 ArgType::Reg(idx) => self.register_file.read(idx),
-                ArgType::Imm(imm) => ArgVal::Ready(imm),
+                ArgType::Imm(imm) => ArgState::Ready(imm),
             };
-            arg_vals.push(val);
+            renamed_args.push(val);
         }
 
-        let result = self.try_issue(&inst, &arg_vals);
+        let result = self.try_issue(&inst, &renamed_args);
         if let IssueResult::Issued(tag) = result {
             next_pc += 1;
             self.register_renaming(tag, inst)?;

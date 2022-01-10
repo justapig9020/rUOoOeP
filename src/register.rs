@@ -1,4 +1,4 @@
-use crate::execution_path::{ArgVal, RStag};
+use crate::execution_path::{ArgState, RStag};
 use std::default::Default;
 
 #[derive(Default, Debug)]
@@ -70,13 +70,13 @@ impl RegisterFile {
     pub fn new() -> Self {
         Default::default()
     }
-    pub fn read(&self, idx: usize) -> ArgVal {
+    pub fn read(&self, idx: usize) -> ArgState {
         let entry = &self.entry[idx];
         if let Some(tag) = entry.tag.as_ref() {
-            ArgVal::Waiting(tag.clone())
+            ArgState::Waiting(tag.clone())
         } else {
             let val = entry.val;
-            ArgVal::Ready(val)
+            ArgState::Ready(val)
         }
     }
     pub fn write(&mut self, tag: RStag, val: u32) {

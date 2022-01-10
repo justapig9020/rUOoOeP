@@ -1,6 +1,6 @@
 use crate::decoder::{InstFormat, InstFormatCreater, TokenType};
 use crate::display::into_table;
-use crate::execution_path::{ArgVal, ExecPath, ExecResult, RStag};
+use crate::execution_path::{ArgState, ExecPath, ExecResult, RStag};
 use crate::result_bus::ResultBus;
 use std::fmt::{self, Display};
 
@@ -12,13 +12,13 @@ pub struct Unit {
 }
 
 impl ExecPath for Unit {
-    fn get_name(&self) -> String {
+    fn name(&self) -> String {
         self.name.clone()
     }
-    fn get_func(&self) -> String {
+    fn function(&self) -> String {
         String::from("arth")
     }
-    fn list_inst(&self) -> Vec<InstFormat> {
+    fn list_insts(&self) -> Vec<InstFormat> {
         vec![
             InstFormat::create("add")
                 .add_syntax(TokenType::Writeback)
@@ -32,17 +32,17 @@ impl ExecPath for Unit {
                 .done(),
         ]
     }
-    fn forwarding(&mut self, tag: RStag, val: u32) {
+    fn forward(&mut self, tag: RStag, val: u32) {
         let inst_from = tag.station();
-        if self.get_name() == inst_from {
+        if self.name() == inst_from {
             let idx = tag.slot();
             self.station.sloved(idx);
         }
         self.station.forwarding(&tag, val);
     }
-    fn issue(&mut self, inst: String, vals: &[ArgVal]) -> Result<RStag, ()> {
+    fn try_issue(&mut self, inst: String, renamed_args: &[ArgState]) -> Result<RStag, ()> {
         self.station
-            .insert(inst, vals)
+            .insert(inst, renamed_args)
             .map(|idx| {
                 let tag = RStag::new(&self.name, idx);
                 tag
@@ -62,7 +62,7 @@ impl ExecPath for Unit {
                 let name = inst.inst;
                 let arg0 = inst.arg0.val().unwrap_or(0);
                 let arg1 = inst.arg1.val().unwrap_or(0);
-                let tag = RStag::new(&self.get_name(), idx);
+                let tag = RStag::new(&self.name(), idx);
                 self.exec = Some(ExecUnit::exec(tag, name, arg0, arg1));
             }
         }
@@ -127,16 +127,16 @@ impl RStation {
     /// Insert a instruction to reservation station.
     /// Retuen Some(slot number) is the insert success.
     /// Return None if there is no empty slot.
-    fn insert(&mut self, inst: String, args: &[ArgVal]) -> Option<usize> {
-        if args.len() != 2 {
+    fn insert(&mut self, inst: String, renamed_args: &[ArgState]) -> Option<usize> {
+        if renamed_args.len() != 2 {
             return None;
         }
         for (idx, slot) in self.slots.iter_mut().enumerate() {
             if slot.is_none() {
                 *slot = Some(ArthInst {
                     inst,
-                    arg0: args[0].clone(),
-                    arg1: args[1].clone(),
+                    arg0: renamed_args[0].clone(),
+                    arg1: renamed_args[1].clone(),
                 });
                 self.just_issued = Some(idx);
                 return Some(idx);
@@ -185,8 +185,8 @@ impl RStation {
 #[derive(Debug, Clone)]
 struct ArthInst {
     inst: String,
-    arg0: ArgVal,
-    arg1: ArgVal,
+    arg0: ArgState,
+    arg1: ArgState,
 }
 
 impl Display for ArthInst {
@@ -198,22 +198,22 @@ impl Display for ArthInst {
 impl ArthInst {
     /// An instruction is ready if it's not waiting result of another instruction.
     fn is_ready(&self) -> bool {
-        if let ArgVal::Ready(_) = self.arg0 {
-            if let ArgVal::Ready(_) = self.arg1 {
+        if let ArgState::Ready(_) = self.arg0 {
+            if let ArgState::Ready(_) = self.arg1 {
                 return true;
             }
         }
         false
     }
     fn forwarding(&mut self, tag: &RStag, val: u32) {
-        if let ArgVal::Waiting(wait) = self.arg0.clone() {
+        if let ArgState::Waiting(wait) = self.arg0.clone() {
             if wait == *tag {
-                self.arg0 = ArgVal::Ready(val);
+                self.arg0 = ArgState::Ready(val);
             }
         }
-        if let ArgVal::Waiting(wait) = self.arg1.clone() {
+        if let ArgState::Waiting(wait) = self.arg1.clone() {
             if wait == *tag {
-                self.arg1 = ArgVal::Ready(val);
+                self.arg1 = ArgState::Ready(val);
             }
         }
     }
