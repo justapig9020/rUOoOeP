@@ -1,7 +1,7 @@
 use crate::decoder::{ArgType, DecodedInst, Decoder};
 use crate::display::into_table;
 use crate::execution_path::{execution_path_factory, ArgVal, ExecPath, RStag};
-use crate::register::RegFile;
+use crate::register::RegisterFile;
 use crate::result_bus::ResultBus;
 use std::collections::HashMap;
 use std::fmt;
@@ -16,7 +16,7 @@ pub struct Processor {
     pc: usize,
     decoder: Decoder,
     paths: HashMap<String, Box<dyn ExecPath>>,
-    register_file: RegFile,
+    register_file: RegisterFile,
     result_bus: ResultBus,
 }
 
@@ -33,7 +33,7 @@ impl Processor {
             pc: 0,
             decoder: Decoder::new(),
             paths: HashMap::new(),
-            register_file: RegFile::new(),
+            register_file: RegisterFile::new(),
             result_bus: ResultBus::new(),
         }
     }

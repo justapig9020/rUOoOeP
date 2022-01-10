@@ -2,7 +2,8 @@ use crate::execution_path::{ArgVal, RStag};
 use std::default::Default;
 
 #[derive(Default, Debug)]
-pub struct RegFile {
+/// Renamable register file
+pub struct RegisterFile {
     entry: [Entry; 16],
 }
 
@@ -24,7 +25,7 @@ mod regfile {
     #[test]
     fn new() {
         let default_val = 0;
-        let rf = RegFile::new();
+        let rf = RegisterFile::new();
         for e in rf.entry.iter() {
             assert_eq!(default_val, e.val);
             assert!(e.tag.is_none());
@@ -32,7 +33,7 @@ mod regfile {
     }
     #[test]
     fn write_match() {
-        let mut rf = RegFile::new();
+        let mut rf = RegisterFile::new();
         let tag = RStag::new("name", 1);
         let write_val = 100;
         let to_write = [0, 10, 15];
@@ -50,7 +51,7 @@ mod regfile {
     }
     #[test]
     fn write_not_match() {
-        let mut rf = RegFile::new();
+        let mut rf = RegisterFile::new();
         let tag_set = RStag::new("name", 1);
         let tag_write = RStag::new("name", 2);
         let to_not_match = 5;
@@ -65,7 +66,7 @@ mod regfile {
     }
 }
 
-impl RegFile {
+impl RegisterFile {
     pub fn new() -> Self {
         Default::default()
     }
@@ -88,12 +89,14 @@ impl RegFile {
             }
         }
     }
+    /// Rename register number `idx` with reservation station tag
     pub fn rename(&mut self, idx: usize, tag: RStag) {
         self.entry[idx].tag = Some(tag);
     }
     pub fn size(&self) -> usize {
         self.entry.len()
     }
+    /// Dump content of registers as [String]
     pub fn dump(&self) -> Vec<String> {
         let size = self.entry.len();
         let mut ret = Vec::with_capacity(size);
