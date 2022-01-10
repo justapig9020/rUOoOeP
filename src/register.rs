@@ -93,9 +93,6 @@ impl RegisterFile {
     pub fn rename(&mut self, idx: usize, tag: RStag) {
         self.entry[idx].tag = Some(tag);
     }
-    pub fn size(&self) -> usize {
-        self.entry.len()
-    }
     /// Dump content of registers as [String]
     pub fn dump(&self) -> Vec<String> {
         let size = self.entry.len();

@@ -320,31 +320,31 @@ pub enum ArgType {
 mod syntaxtype_test {
     use super::TokenType;
     #[test]
-    fn Sametype() {
+    fn same_type() {
         let a = TokenType::Immediate;
         let b = TokenType::Immediate;
         assert!(a.matches(&b));
     }
     #[test]
-    fn Register_Writeback() {
+    fn register_writeback() {
         let a = TokenType::Register;
         let b = TokenType::Writeback;
         assert!(a.matches(&b));
     }
     #[test]
-    fn Writeback_Register() {
+    fn writeback_register() {
         let a = TokenType::Writeback;
         let b = TokenType::Register;
         assert!(a.matches(&b));
     }
     #[test]
-    fn Register_Immediate() {
+    fn register_immediate() {
         let a = TokenType::Register;
         let b = TokenType::Immediate;
         assert!(!a.matches(&b));
     }
     #[test]
-    fn Writeback_Immediate() {
+    fn writeback_immediate() {
         let a = TokenType::Writeback;
         let b = TokenType::Immediate;
         assert!(!a.matches(&b));

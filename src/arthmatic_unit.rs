@@ -1,4 +1,4 @@
-use crate::decoder::{InstFormat, InstFormatCreater, TokenType};
+use crate::decoder::{InstFormat, TokenType};
 use crate::display::into_table;
 use crate::execution_path::{ArgState, ExecPath, ExecResult, RStag};
 use crate::result_bus::ResultBus;
