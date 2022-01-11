@@ -49,7 +49,7 @@ impl ExecPath for Unit {
             })
             .ok_or(())
     }
-    fn next_cycle(&mut self, bus: &mut ResultBus) {
+    fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String> {
         if let Some(unit) = self.exec.as_mut() {
             let done = unit.next_cycle(bus);
             if done {
@@ -58,14 +58,11 @@ impl ExecPath for Unit {
             }
         }
         if self.exec.is_none() {
-            if let Some((idx, inst)) = self.station.ready() {
-                let name = inst.inst;
-                let arg0 = inst.arg0.val().unwrap_or(0);
-                let arg1 = inst.arg1.val().unwrap_or(0);
-                let tag = RStag::new(&self.name(), idx);
-                self.exec = Some(ExecUnit::exec(tag, name, arg0, arg1));
+            if let Some(id) = self.station.ready() {
+                self.execute(id)?;
             }
         }
+        Ok(())
     }
     fn pending(&self) -> usize {
         self.station.pending()
@@ -76,9 +73,10 @@ impl ExecPath for Unit {
             .station
             .slots
             .iter()
-            .map(|slot| match slot.as_ref() {
-                Some(c) => format!("{}", c),
-                None => String::from("None"),
+            .map(|slot| match slot {
+                SlotState::Empty => String::from("Empty"),
+                SlotState::Executing(inst) => format!("Exe({})", inst),
+                SlotState::Pending(inst) => format!("Pend({})", inst),
             })
             .collect();
         info.push_str(&into_table("Reservation station", slots));
@@ -105,15 +103,54 @@ impl Unit {
             exec: None,
         }
     }
+    /// Execute instruction in given slot.
+    /// On failed, error message returned.
+    fn execute(&mut self, slot_id: usize) -> Result<(), String> {
+        let slot = self
+            .station
+            .slots
+            .get(slot_id)
+            .ok_or(format!("Slot {} not exist", slot_id))?;
+        if let SlotState::Pending(inst) = slot {
+            let name = inst.name.clone();
+            let arg0 = inst
+                .arg0
+                .val()
+                .ok_or("Argument 0 is not ready".to_string())?;
+            let arg1 = inst
+                .arg1
+                .val()
+                .ok_or("Argument 1 is not ready".to_string())?;
+            let tag = RStag::new(&self.name(), slot_id);
+            self.exec = Some(ExecUnit::exec(tag, name, arg0, arg1));
+            self.station.slots[slot_id] = SlotState::Executing(inst.clone());
+            Ok(())
+        } else {
+            Err(format!("Slot {} is not pending", slot_id))
+        }
+    }
+}
+
+#[derive(Debug)]
+enum SlotState {
+    Empty,
+    Pending(ArthInst),
+    Executing(ArthInst),
+}
+
+impl SlotState {
+    fn is_empty(&self) -> bool {
+        if let SlotState::Empty = self {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Debug)]
 struct ReservationStation {
-    slots: Vec<Option<ArthInst>>,
-    /// Due to the instruction can not go into execution in the cycle it just
-    /// commit.
-    /// Add the indicator to indicate the index that is just issued in this cycle.
-    just_issued: Option<usize>,
+    slots: Vec<SlotState>,
 }
 
 #[cfg(test)]
@@ -142,8 +179,7 @@ mod resrvation_station {
 impl ReservationStation {
     fn new(size: usize) -> Self {
         Self {
-            slots: (0..size).map(|_| None).collect(),
-            just_issued: None,
+            slots: (0..size).map(|_| SlotState::Empty).collect(),
         }
     }
     /// Insert a instruction to reservation station.
@@ -154,37 +190,25 @@ impl ReservationStation {
             return None;
         }
         for (idx, slot) in self.slots.iter_mut().enumerate() {
-            if slot.is_none() {
-                *slot = Some(ArthInst {
-                    inst,
+            if slot.is_empty() {
+                *slot = SlotState::Pending(ArthInst {
+                    name: inst,
                     arg0: renamed_args[0].clone(),
                     arg1: renamed_args[1].clone(),
                 });
-                self.just_issued = Some(idx);
                 return Some(idx);
             }
         }
         None
     }
     /// Find a ready instruction.
-    /// If found, remove it from reservation station and return it.
-    /// The return value is composed of (index of slot, intruction).
+    /// If found, its index returned.
     /// Otherwise, return None.
-    fn ready(&mut self) -> Option<(usize, ArthInst)> {
-        let skip = if let Some(idx) = self.just_issued {
-            idx
-        } else {
-            // This index will never reached
-            self.slots.len()
-        };
-        self.just_issued = None;
+    fn ready(&mut self) -> Option<usize> {
         for (idx, slot) in self.slots.iter_mut().enumerate() {
-            if idx == skip {
-                continue;
-            }
-            if let Some(inst) = slot {
+            if let SlotState::Pending(inst) = slot {
                 if inst.is_ready() {
-                    return Some((idx, inst.clone()));
+                    return Some(idx);
                 }
             }
         }
@@ -193,31 +217,32 @@ impl ReservationStation {
     /// The slot's instruction is solved, remove it.
     fn sloved(&mut self, idx: usize) {
         if idx < self.slots.len() {
-            self.slots[idx] = None;
+            self.slots[idx] = SlotState::Empty;
         }
     }
     fn forwarding(&mut self, tag: &RStag, val: u32) {
         for slot in self.slots.iter_mut() {
-            if let Some(slot) = slot {
+            if let SlotState::Pending(slot) = slot {
                 slot.forwarding(tag, val);
             }
         }
     }
     fn pending(&self) -> usize {
-        self.slots.iter().map(|a| a.is_some() as usize).sum()
+        let empty: usize = self.slots.iter().map(|a| a.is_empty() as usize).sum();
+        self.slots.len() - empty
     }
 }
 
 #[derive(Debug, Clone)]
 struct ArthInst {
-    inst: String,
+    name: String,
     arg0: ArgState,
     arg1: ArgState,
 }
 
 impl Display for ArthInst {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}, {}", self.inst, self.arg0, self.arg1)
+        write!(f, "{}: {}, {}", self.name, self.arg0, self.arg1)
     }
 }
 

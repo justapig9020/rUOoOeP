@@ -106,7 +106,7 @@ pub trait ExecPath: Debug {
     /// On success, [Ok] with tag of issued reservation station returned.
     /// Otherwise, [Err] returned.
     fn try_issue(&mut self, inst: String, vals: &[ArgState]) -> Result<RStag, ()>;
-    fn next_cycle(&mut self, bus: &mut ResultBus);
+    fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String>;
     /// Return pending instruction count
     fn pending(&self) -> usize;
     fn dump(&self) -> String;
