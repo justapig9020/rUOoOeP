@@ -123,28 +123,32 @@ impl Processor {
     pub fn next_cycle(&mut self, row_inst: &str) -> Result<(), String> {
         let mut next_pc = self.pc;
         self.commit();
+        // TODO: Implement "NOP" as an instruction
+        if row_inst != "NOP" {
+            let inst = self.decoder.decode(row_inst)?;
+            let args = inst.arguments();
+            let mut renamed_args = Vec::with_capacity(args.len());
 
-        let inst = self.decoder.decode(row_inst)?;
-        let args = inst.arguments();
-        let mut renamed_args = Vec::with_capacity(args.len());
+            // Mapping arguments from types to data
+            for arg in args.iter() {
+                let val = match *arg {
+                    ArgType::Reg(idx) => self.register_file.read(idx),
+                    ArgType::Imm(imm) => ArgState::Ready(imm),
+                };
+                renamed_args.push(val);
+            }
 
-        // Mapping arguments from types to data
-        for arg in args.iter() {
-            let val = match *arg {
-                ArgType::Reg(idx) => self.register_file.read(idx),
-                ArgType::Imm(imm) => ArgState::Ready(imm),
-            };
-            renamed_args.push(val);
-        }
-
-        let result = self.try_issue(&inst, &renamed_args);
-        if let IssueResult::Issued(tag) = result {
+            let result = self.try_issue(&inst, &renamed_args);
+            if let IssueResult::Issued(tag) = result {
+                next_pc += 1;
+                self.register_renaming(tag, inst)?;
+            }
+        } else {
             next_pc += 1;
-            self.register_renaming(tag, inst)?;
         }
 
         for (_, exec_unit) in self.paths.iter_mut() {
-            exec_unit.next_cycle(&mut self.result_bus);
+            exec_unit.next_cycle(&mut self.result_bus)?;
         }
 
         self.pc = next_pc;
