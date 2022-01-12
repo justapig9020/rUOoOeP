@@ -1,5 +1,6 @@
 use crate::arthmatic_unit;
 use crate::decoder::InstFormat;
+use crate::nop_unit;
 use crate::result_bus::ResultBus;
 use std::clone::Clone;
 use std::cmp::PartialEq;
@@ -116,8 +117,13 @@ pub trait ExecPath: Debug {
 pub fn execution_path_factory(func: &str) -> Result<Box<dyn ExecPath>, String> {
     match func {
         "arth" => {
-            let unit = arthmatic_unit::Unit::new();
-            let unit = Box::new(unit) as Box<dyn ExecPath>;
+            let unit = Box::new(arthmatic_unit::Unit::new());
+            let unit = unit as Box<dyn ExecPath>;
+            Ok(unit)
+        }
+        "nop" => {
+            let unit = Box::new(nop_unit::Unit::new());
+            let unit = unit as Box<dyn ExecPath>;
             Ok(unit)
         }
         _ => {

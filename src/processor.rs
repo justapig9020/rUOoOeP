@@ -29,13 +29,16 @@ impl fmt::Display for Processor {
 
 impl Processor {
     pub fn new() -> Self {
-        Self {
+        let mut ret = Self {
             pc: 0,
             decoder: Decoder::new(),
             paths: HashMap::new(),
             register_file: RegisterFile::new(),
             result_bus: ResultBus::new(),
-        }
+        };
+        ret.add_path("nop")
+            .expect("Unable to add nop instruction path");
+        ret
     }
     /// Add an execution path to the processor.
     pub fn add_path(&mut self, func: &str) -> Result<(), String> {
@@ -123,28 +126,24 @@ impl Processor {
     pub fn next_cycle(&mut self, row_inst: &str) -> Result<(), String> {
         let mut next_pc = self.pc;
         self.commit();
-        // TODO: Implement "NOP" as an instruction
-        if row_inst != "NOP" {
-            let inst = self.decoder.decode(row_inst)?;
-            let args = inst.arguments();
-            let mut renamed_args = Vec::with_capacity(args.len());
 
-            // Mapping arguments from types to data
-            for arg in args.iter() {
-                let val = match *arg {
-                    ArgType::Reg(idx) => self.register_file.read(idx),
-                    ArgType::Imm(imm) => ArgState::Ready(imm),
-                };
-                renamed_args.push(val);
-            }
+        let inst = self.decoder.decode(row_inst)?;
+        let args = inst.arguments();
+        let mut renamed_args = Vec::with_capacity(args.len());
 
-            let result = self.try_issue(&inst, &renamed_args);
-            if let IssueResult::Issued(tag) = result {
-                next_pc += 1;
-                self.register_renaming(tag, inst)?;
-            }
-        } else {
+        // Mapping arguments from types to data
+        for arg in args.iter() {
+            let val = match *arg {
+                ArgType::Reg(idx) => self.register_file.read(idx),
+                ArgType::Imm(imm) => ArgState::Ready(imm),
+            };
+            renamed_args.push(val);
+        }
+
+        let result = self.try_issue(&inst, &renamed_args);
+        if let IssueResult::Issued(tag) = result {
             next_pc += 1;
+            self.register_renaming(tag, inst)?;
         }
 
         for (_, exec_unit) in self.paths.iter_mut() {
