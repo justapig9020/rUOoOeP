@@ -6,6 +6,7 @@ mod graph;
 mod nop_unit;
 mod processor;
 mod register;
+mod reservation_station;
 mod result_bus;
 use processor::Processor;
 use std::io;
