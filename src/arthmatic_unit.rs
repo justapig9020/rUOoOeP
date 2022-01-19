@@ -1,6 +1,7 @@
 use crate::decoder::{InstFormat, TokenType};
 use crate::display::into_table;
 use crate::execution_path::{ArgState, ExecPath, ExecResult, RStag};
+use crate::reservation_station::*;
 use crate::result_bus::ResultBus;
 use std::fmt::{self, Display};
 
@@ -41,8 +42,9 @@ impl ExecPath for Unit {
         self.station.forwarding(&tag, val);
     }
     fn try_issue(&mut self, inst: String, renamed_args: &[ArgState]) -> Result<RStag, ()> {
+        let inst = ArthInst::new(inst, renamed_args).map_err(|_| ())?;
         self.station
-            .insert(inst, renamed_args)
+            .insert(inst as Box<dyn RenamedInst>)
             .map(|idx| {
                 let tag = RStag::new(&self.name, idx);
                 tag
@@ -69,16 +71,7 @@ impl ExecPath for Unit {
     }
     fn dump(&self) -> String {
         let mut info = format!("{}\n", self.name);
-        let slots: Vec<String> = self
-            .station
-            .slots
-            .iter()
-            .map(|slot| match slot {
-                SlotState::Empty => String::from("Empty"),
-                SlotState::Executing(inst) => format!("Exe({})", inst),
-                SlotState::Pending(inst) => format!("Pend({})", inst),
-            })
-            .collect();
+        let slots: Vec<String> = self.station.dump();
         info.push_str(&into_table("Reservation station", slots));
         if let Some(exec) = self.exec.as_ref() {
             let exec = exec.to_string();
@@ -108,128 +101,28 @@ impl Unit {
     fn execute(&mut self, slot_id: usize) -> Result<(), String> {
         let slot = self
             .station
-            .slots
-            .get(slot_id)
+            .get_slot(slot_id)
             .ok_or(format!("Slot {} not exist", slot_id))?;
         if let SlotState::Pending(inst) = slot {
-            let name = inst.name.clone();
-            let arg0 = inst
-                .arg0
+            let name = inst.name();
+            let args = inst.arguments();
+            let arg0 = args
+                .get(0)
+                .ok_or("There is no argument 0")?
                 .val()
                 .ok_or("Argument 0 is not ready".to_string())?;
-            let arg1 = inst
-                .arg1
+            let arg1 = args
+                .get(1)
+                .ok_or("There is no argument 0")?
                 .val()
                 .ok_or("Argument 1 is not ready".to_string())?;
             let tag = RStag::new(&self.name(), slot_id);
-            self.exec = Some(ExecUnit::exec(tag, name, arg0, arg1));
-            self.station.slots[slot_id] = SlotState::Executing(inst.clone());
+            self.exec = Some(ExecUnit::exec(tag, name.to_string(), arg0, arg1));
+            self.station.start_execute(slot_id);
             Ok(())
         } else {
             Err(format!("Slot {} is not pending", slot_id))
         }
-    }
-}
-
-#[derive(Debug)]
-enum SlotState {
-    Empty,
-    Pending(ArthInst),
-    Executing(ArthInst),
-}
-
-impl SlotState {
-    fn is_empty(&self) -> bool {
-        if let SlotState::Empty = self {
-            true
-        } else {
-            false
-        }
-    }
-}
-
-#[derive(Debug)]
-struct ReservationStation {
-    slots: Vec<SlotState>,
-}
-
-#[cfg(test)]
-mod resrvation_station {
-    use super::*;
-
-    fn new_instruction() -> (String, &'static [ArgState]) {
-        (
-            String::from("inst"),
-            &[ArgState::Ready(1), ArgState::Ready(2)],
-        )
-    }
-    #[test]
-    fn pending() {
-        let size = 10;
-        let mut station = ReservationStation::new(size);
-        let inst_cnt = 5;
-        for _ in 0..inst_cnt {
-            let (inst, args) = new_instruction();
-            station.insert(inst, args);
-        }
-        assert_eq!(inst_cnt, station.pending());
-    }
-}
-
-impl ReservationStation {
-    fn new(size: usize) -> Self {
-        Self {
-            slots: (0..size).map(|_| SlotState::Empty).collect(),
-        }
-    }
-    /// Insert a instruction to reservation station.
-    /// Retuen Some(slot number) is the insert success.
-    /// Return None if there is no empty slot.
-    fn insert(&mut self, inst: String, renamed_args: &[ArgState]) -> Option<usize> {
-        if renamed_args.len() != 2 {
-            return None;
-        }
-        for (idx, slot) in self.slots.iter_mut().enumerate() {
-            if slot.is_empty() {
-                *slot = SlotState::Pending(ArthInst {
-                    name: inst,
-                    arg0: renamed_args[0].clone(),
-                    arg1: renamed_args[1].clone(),
-                });
-                return Some(idx);
-            }
-        }
-        None
-    }
-    /// Find a ready instruction.
-    /// If found, its index returned.
-    /// Otherwise, return None.
-    fn ready(&mut self) -> Option<usize> {
-        for (idx, slot) in self.slots.iter_mut().enumerate() {
-            if let SlotState::Pending(inst) = slot {
-                if inst.is_ready() {
-                    return Some(idx);
-                }
-            }
-        }
-        None
-    }
-    /// The slot's instruction is solved, remove it.
-    fn sloved(&mut self, idx: usize) {
-        if idx < self.slots.len() {
-            self.slots[idx] = SlotState::Empty;
-        }
-    }
-    fn forwarding(&mut self, tag: &RStag, val: u32) {
-        for slot in self.slots.iter_mut() {
-            if let SlotState::Pending(slot) = slot {
-                slot.forwarding(tag, val);
-            }
-        }
-    }
-    fn pending(&self) -> usize {
-        let empty: usize = self.slots.iter().map(|a| a.is_empty() as usize).sum();
-        self.slots.len() - empty
     }
 }
 
@@ -247,7 +140,26 @@ impl Display for ArthInst {
 }
 
 impl ArthInst {
-    /// An instruction is ready if it's not waiting result of another instruction.
+    fn new(name: String, renamed_args: &[ArgState]) -> Result<Box<Self>, String> {
+        if renamed_args.len() != 2 {
+            Err(format!("Expect 2 arguments, {} got", renamed_args.len()))
+        } else {
+            Ok(Box::new(Self {
+                name,
+                arg0: renamed_args[0].clone(),
+                arg1: renamed_args[1].clone(),
+            }))
+        }
+    }
+}
+
+impl RenamedInst for ArthInst {
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn arguments(&self) -> Vec<ArgState> {
+        vec![self.arg0.clone(), self.arg1.clone()]
+    }
     fn is_ready(&self) -> bool {
         use ArgState::Ready;
         matches!(self.arg0, Ready(_)) && matches!(self.arg1, Ready(_))
