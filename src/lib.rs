@@ -1,0 +1,10 @@
+mod arthmatic_unit;
+mod decoder;
+mod display;
+mod execution_path;
+mod graph;
+mod nop_unit;
+pub mod processor;
+mod register;
+mod reservation_station;
+mod result_bus;
