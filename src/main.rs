@@ -2,6 +2,7 @@ mod core;
 mod display;
 mod functional_units;
 mod graph;
+mod virtual_machine;
 use crate::core::processor::Processor;
 use crate::functional_units::factory::{Factory, Function};
 use std::io;
@@ -35,26 +36,21 @@ fn main() -> Result<(), String> {
         "nop",
     ];
 
+    let program = program.iter().map(|i| i.to_string()).collect();
+
     let mut p = Processor::new();
     let mut ff = Factory::new();
     for _ in 0..2 {
         let unit = ff.new_unit(Function::Arthmatic);
         p.add_path(unit)?;
     }
+    let mut vm = virtual_machine::Machine::new(p, program, 0);
 
-    loop {
-        let line = p.fetch_address();
-        let inst = if let Some(inst) = program.get(line) {
-            inst
-        } else {
-            break;
-        };
-        println!("Line {}:", line);
-        println!("{}", p);
+    while let Ok(_) = vm.next_cycle() {
+        println!("{}", vm);
         pause();
-        p.next_cycle(inst)?;
     }
-    println!("");
+    let p = vm.into_processor();
     println!("Emulation finished");
     println!("{:#?}", p);
     Ok(())
