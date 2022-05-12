@@ -1,8 +1,9 @@
-use crate::decoder::{ArgType, DecodedInst, Decoder};
+use super::decoder::{ArgType, DecodedInst, Decoder};
+use super::execution_path::{ArgState, ExecPath, RStag};
+use super::nop_unit;
+use super::register::RegisterFile;
+use super::result_bus::ResultBus;
 use crate::display::into_table;
-use crate::execution_path::{execution_path_factory, ArgState, ExecPath, RStag};
-use crate::register::RegisterFile;
-use crate::result_bus::ResultBus;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -11,53 +12,6 @@ enum IssueResult {
     Stall,
 }
 
-#[cfg(test)]
-mod processor {
-    use super::*;
-    #[test]
-    fn arthmatic_unit_exec() {
-        use ArgState::*;
-        let program = vec![
-            "addi R1, R0, #100", // R1 = 100
-            "addi R2, R0, #200", // R2 = 200
-            "add R3, R1, R2",    // R3 = 300
-            "add R4, R1, R3",    // R4 = 400
-            "add R3, R4, R3",    // R3 = 700
-            "addi R1, R5, #400", // R1 = 400
-            "add R5, R1, R2",    // R5 = 600
-                                 /* R1: 400
-                                  * R2: 200
-                                  * R3: 700
-                                  * R4: 400
-                                  * R5: 600
-                                  */
-        ];
-        let mut p = Processor::new();
-        p.add_path("arth").unwrap();
-        p.add_path("arth").unwrap();
-        // TODO: Use more presice loop amount
-        for _ in 0..100 {
-            let line = p.fetch_address();
-            // TODO: Avoid with workaround NOP
-            let inst = if line >= program.len() {
-                "nop"
-            } else {
-                program[line]
-            };
-            p.next_cycle(inst).unwrap();
-        }
-        let r1 = p.register_file.read(1);
-        assert!(matches!(r1, Ready(400)));
-        let r2 = p.register_file.read(2);
-        assert!(matches!(r2, Ready(200)), "R2: {:?}", r2);
-        let r3 = p.register_file.read(3);
-        assert!(matches!(r3, Ready(700)));
-        let r4 = p.register_file.read(4);
-        assert!(matches!(r4, Ready(400)));
-        let r5 = p.register_file.read(5);
-        assert!(matches!(r5, Ready(600)));
-    }
-}
 #[derive(Debug)]
 pub struct Processor {
     pc: usize,
@@ -83,17 +37,17 @@ impl Processor {
             register_file: RegisterFile::new(),
             result_bus: ResultBus::new(),
         };
-        ret.add_path("nop")
+        let nop_unit = Box::new(nop_unit::Unit::new());
+        ret.add_path(nop_unit)
             .expect("Unable to add nop instruction path");
         ret
     }
     /// Add an execution path to the processor.
-    pub fn add_path(&mut self, func: &str) -> Result<(), String> {
-        let path = execution_path_factory(&func)?;
-        let insts = path.list_insts();
-        let name = path.name();
+    pub fn add_path(&mut self, func: Box<dyn ExecPath>) -> Result<(), String> {
+        let insts = func.list_insts();
+        let name = func.name();
 
-        if let Some(prev) = self.paths.insert(name.clone(), path) {
+        if let Some(prev) = self.paths.insert(name.clone(), func) {
             let msg = format!("Already has a execution path with name {}", prev.name());
             Err(msg)
         } else {

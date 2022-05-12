@@ -1,4 +1,4 @@
-use crate::execution_path::{ExecResult, RStag};
+use super::execution_path::{ExecResult, RStag};
 
 #[derive(Debug)]
 pub struct ResultBus {

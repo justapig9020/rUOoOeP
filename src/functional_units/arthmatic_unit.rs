@@ -1,8 +1,10 @@
-use crate::decoder::{InstFormat, TokenType};
+use crate::core::decoder::{InstFormat, TokenType};
+use crate::core::execution_path::{ArgState, ExecPath, ExecResult, RStag};
+use crate::core::result_bus::ResultBus;
+
 use crate::display::into_table;
-use crate::execution_path::{ArgState, ExecPath, ExecResult, RStag};
-use crate::reservation_station::*;
-use crate::result_bus::ResultBus;
+
+use super::reservation_station::*;
 use std::fmt::{self, Display};
 
 #[derive(Debug)]
@@ -118,7 +120,7 @@ impl Unit {
                 .ok_or("Argument 1 is not ready".to_string())?;
             let tag = RStag::new(&self.name(), slot_id);
             self.exec = Some(ExecUnit::exec(tag, name.to_string(), arg0, arg1));
-            self.station.start_execute(slot_id);
+            self.station.start_execute(slot_id)?;
             Ok(())
         } else {
             Err(format!("Slot {} is not pending", slot_id))

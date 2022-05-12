@@ -1,14 +1,9 @@
-mod arthmatic_unit;
-mod decoder;
+mod core;
 mod display;
-mod execution_path;
+mod functional_units;
 mod graph;
-mod nop_unit;
-mod processor;
-mod register;
-mod reservation_station;
-mod result_bus;
-use processor::Processor;
+use crate::core::processor::Processor;
+use crate::functional_units::execution_path_factory;
 use std::io;
 
 fn main() -> Result<(), String> {
@@ -40,8 +35,10 @@ fn main() -> Result<(), String> {
         "nop",
     ];
     let mut p = Processor::new();
-    p.add_path("arth")?;
-    p.add_path("arth")?;
+    for _ in 0..2 {
+        let unit = execution_path_factory("arth")?;
+        p.add_path(unit)?;
+    }
     loop {
         let line = p.fetch_address();
         let inst = if let Some(inst) = program.get(line) {
