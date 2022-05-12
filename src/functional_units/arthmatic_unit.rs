@@ -85,15 +85,9 @@ impl ExecPath for Unit {
 }
 
 impl Unit {
-    pub fn new() -> Self {
-        static mut CNT: usize = 0;
-        // Safety: the cnt will only be used in this function
-        let idx = unsafe {
-            CNT += 1;
-            CNT - 1
-        };
+    pub fn new(index: usize) -> Self {
         Self {
-            name: format!("arth{}", idx),
+            name: format!("arth{}", index),
             station: ReservationStation::new(5),
             exec: None,
         }

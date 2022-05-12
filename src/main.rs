@@ -3,7 +3,7 @@ mod display;
 mod functional_units;
 mod graph;
 use crate::core::processor::Processor;
-use crate::functional_units::execution_path_factory;
+use crate::functional_units::factory::{Factory, Function};
 use std::io;
 
 fn main() -> Result<(), String> {
@@ -34,11 +34,14 @@ fn main() -> Result<(), String> {
         "nop",
         "nop",
     ];
+
     let mut p = Processor::new();
+    let mut ff = Factory::new();
     for _ in 0..2 {
-        let unit = execution_path_factory("arth")?;
+        let unit = ff.new_unit(Function::Arthmatic);
         p.add_path(unit)?;
     }
+
     loop {
         let line = p.fetch_address();
         let inst = if let Some(inst) = program.get(line) {
