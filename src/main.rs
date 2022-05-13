@@ -1,3 +1,4 @@
+#![feature(trait_upcasting)]
 mod core;
 mod display;
 mod functional_units;

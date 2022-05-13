@@ -1,4 +1,5 @@
 use super::decoder::InstFormat;
+use super::processor::BusAccess;
 use super::result_bus::ResultBus;
 use std::clone::Clone;
 use std::cmp::PartialEq;
@@ -109,4 +110,9 @@ pub trait ExecPath: Debug {
     /// Return pending instruction count
     fn pending(&self) -> usize;
     fn dump(&self) -> String;
+}
+
+pub trait AccessPath: ExecPath {
+    fn request(&mut self) -> Option<BusAccess>;
+    fn resolve(&mut self, val: u8);
 }
