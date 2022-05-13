@@ -1,4 +1,4 @@
-use crate::execution_path::{ArgState, RStag};
+use crate::core::execution_path::{ArgState, RStag};
 use std::fmt::{Debug, Display};
 use std::{default, mem};
 
@@ -46,7 +46,7 @@ mod resrvation_station {
     #[derive(Debug)]
     struct InstStub {}
     impl Display for InstStub {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             Ok(())
         }
     }

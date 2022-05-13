@@ -1,6 +1,6 @@
-use crate::decoder::InstFormat;
-use crate::execution_path::{ArgState, ExecPath, RStag};
-use crate::result_bus::ResultBus;
+use super::decoder::InstFormat;
+use super::execution_path::{ArgState, ExecPath, RStag};
+use super::result_bus::ResultBus;
 
 const FUNC: &str = "nop";
 const NAME: &str = "nop1";

@@ -1,7 +1,5 @@
-use crate::arthmatic_unit;
-use crate::decoder::InstFormat;
-use crate::nop_unit;
-use crate::result_bus::ResultBus;
+use super::decoder::InstFormat;
+use super::result_bus::ResultBus;
 use std::clone::Clone;
 use std::cmp::PartialEq;
 use std::fmt::{self, Debug, Display};
@@ -111,24 +109,4 @@ pub trait ExecPath: Debug {
     /// Return pending instruction count
     fn pending(&self) -> usize;
     fn dump(&self) -> String;
-}
-
-/// Generate a execution path by name of functional unit
-pub fn execution_path_factory(func: &str) -> Result<Box<dyn ExecPath>, String> {
-    match func {
-        "arth" => {
-            let unit = Box::new(arthmatic_unit::Unit::new());
-            let unit = unit as Box<dyn ExecPath>;
-            Ok(unit)
-        }
-        "nop" => {
-            let unit = Box::new(nop_unit::Unit::new());
-            let unit = unit as Box<dyn ExecPath>;
-            Ok(unit)
-        }
-        _ => {
-            let msg = format!("Not support function unit {}", func);
-            Err(msg)
-        }
-    }
 }

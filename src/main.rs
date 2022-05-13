@@ -1,14 +1,10 @@
-mod arthmatic_unit;
-mod decoder;
+mod core;
 mod display;
-mod execution_path;
+mod functional_units;
 mod graph;
-mod nop_unit;
-mod processor;
-mod register;
-mod reservation_station;
-mod result_bus;
-use processor::Processor;
+mod virtual_machine;
+use crate::core::processor::Processor;
+use crate::functional_units::factory::{Factory, Function};
 use std::io;
 
 fn main() -> Result<(), String> {
@@ -39,22 +35,22 @@ fn main() -> Result<(), String> {
         "nop",
         "nop",
     ];
+
+    let program = program.iter().map(|i| i.to_string()).collect();
+
     let mut p = Processor::new();
-    p.add_path("arth")?;
-    p.add_path("arth")?;
-    loop {
-        let line = p.fetch_address();
-        let inst = if let Some(inst) = program.get(line) {
-            inst
-        } else {
-            break;
-        };
-        println!("Line {}:", line);
-        println!("{}", p);
-        pause();
-        p.next_cycle(inst)?;
+    let mut ff = Factory::new();
+    for _ in 0..2 {
+        let unit = ff.new_unit(Function::Arthmatic);
+        p.add_path(unit)?;
     }
-    println!("");
+    let mut vm = virtual_machine::Machine::new(p, program, 0);
+
+    while let Ok(_) = vm.next_cycle() {
+        println!("{}", vm);
+        pause();
+    }
+    let p = vm.into_processor();
     println!("Emulation finished");
     println!("{:#?}", p);
     Ok(())
