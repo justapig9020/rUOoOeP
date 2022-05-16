@@ -7,16 +7,10 @@ pub struct RegisterFile {
     entry: [Entry; 16],
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Entry {
     val: u32,
     tag: Option<RStag>,
-}
-
-impl Default for Entry {
-    fn default() -> Self {
-        Self { val: 0, tag: None }
-    }
 }
 
 #[cfg(test)]

@@ -47,7 +47,7 @@ fn main() -> Result<(), String> {
     }
     let mut vm = virtual_machine::Machine::new(p, program, 0);
 
-    while let Ok(_) = vm.next_cycle() {
+    while vm.next_cycle().is_ok() {
         println!("{}", vm);
         pause();
     }

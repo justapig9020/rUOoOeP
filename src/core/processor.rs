@@ -229,7 +229,7 @@ impl Processor {
             .bus_controller
             .response_handler
             .take()
-            .ok_or(format!("Missing respone handler"))?;
+            .ok_or(String::from("Missing respone handler"))?;
         let unit = self
             .access_paths
             .get_mut(&handler)

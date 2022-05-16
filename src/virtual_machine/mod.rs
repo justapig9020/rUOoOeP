@@ -40,7 +40,7 @@ impl Machine {
             BusAccess::Read(addr) => self
                 .dram
                 .get(addr as usize)
-                .map(|v| *v)
+                .copied()
                 .ok_or(format!("Memory addr: {} out of bound", addr)),
             BusAccess::Write(addr, val) => {
                 let cell = self

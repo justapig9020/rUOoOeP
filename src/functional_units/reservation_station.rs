@@ -17,11 +17,7 @@ impl default::Default for SlotState {
 
 impl SlotState {
     fn is_empty(&self) -> bool {
-        if let SlotState::Empty = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, SlotState::Empty)
     }
 }
 

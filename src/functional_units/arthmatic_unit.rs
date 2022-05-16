@@ -47,10 +47,7 @@ impl ExecPath for Unit {
         let inst = ArthInst::new(inst, renamed_args).map_err(|_| ())?;
         self.station
             .insert(inst as Box<dyn RenamedInst>)
-            .map(|idx| {
-                let tag = RStag::new(&self.name, idx);
-                tag
-            })
+            .map(|idx| RStag::new(&self.name, idx))
             .ok_or(())
     }
     fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String> {
@@ -106,12 +103,12 @@ impl Unit {
                 .get(0)
                 .ok_or("There is no argument 0")?
                 .val()
-                .ok_or("Argument 0 is not ready".to_string())?;
+                .ok_or_else(|| "Argument 0 is not ready".to_string())?;
             let arg1 = args
                 .get(1)
                 .ok_or("There is no argument 0")?
                 .val()
-                .ok_or("Argument 1 is not ready".to_string())?;
+                .ok_or_else(|| "Argument 1 is not ready".to_string())?;
             let tag = RStag::new(&self.name(), slot_id);
             self.exec = Some(ExecUnit::exec(tag, name.to_string(), arg0, arg1));
             self.station.start_execute(slot_id)?;

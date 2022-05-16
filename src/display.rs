@@ -1,6 +1,6 @@
 use std::cmp;
 pub fn into_table(title: &str, rows: Vec<String>) -> String {
-    if rows.len() <= 0 {
+    if rows.is_empty() {
         return String::new();
     }
     let width = rows.iter().map(|s| s.len()).max().unwrap();
