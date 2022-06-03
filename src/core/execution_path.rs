@@ -1,5 +1,4 @@
 use super::decoder::InstFormat;
-use super::processor::BusAccess;
 use super::result_bus::ResultBus;
 use std::clone::Clone;
 use std::cmp::PartialEq;
@@ -112,7 +111,61 @@ pub trait ExecPath: Debug {
     fn dump(&self) -> String;
 }
 
+/// Bus access command
+#[derive(Debug)]
+pub enum BusAccess {
+    /// Read(base address, length)
+    Read(u32, usize),
+    /// Write(base address, data string)
+    Write(u32, Vec<u8>),
+}
+
+/// Handler of a Bus access
+/// Each bus access request containted a handler. The handler will lead the corresponding response to correct execution path
+#[derive(Debug)]
+struct BusAccessHandler {
+    path: String,
+}
+
+impl BusAccessHandler {
+    fn paht_name(&self) -> String {
+        self.path.clone()
+    }
+}
+
+#[derive(Debug)]
+pub struct BusAccessRequst {
+    access: BusAccess,
+    handler: BusAccessHandler,
+}
+
+impl BusAccessRequst {
+    /// Get access command from the request
+    pub fn request(&self) -> &BusAccess {
+        &self.access
+    }
+    /// Submit a result and consume the BusAccess Request then construct corresponding BusAccessResponse
+    pub fn into_respose(self, result: Result<Vec<u8>, String>) -> BusAccessResponse {
+        BusAccessResponse {
+            result,
+            handler: self.handler,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct BusAccessResponse {
+    result: Result<Vec<u8>, String>,
+    handler: BusAccessHandler,
+}
+
+impl BusAccessResponse {
+    pub fn path_name(&self) -> String {
+        self.handler.paht_name()
+    }
+}
+
 pub trait AccessPath: ExecPath {
-    fn request(&mut self) -> Option<BusAccess>;
-    fn resolve(&mut self, val: u8);
+    fn request(&mut self) -> Option<BusAccessRequst>;
+    fn response(&mut self, result: BusAccessResponse);
 }

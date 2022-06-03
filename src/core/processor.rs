@@ -1,5 +1,7 @@
 use super::decoder::{ArgType, DecodedInst, Decoder};
-use super::execution_path::{AccessPath, ArgState, ExecPath, RStag};
+use super::execution_path::{
+    AccessPath, ArgState, BusAccessRequst, BusAccessResponse, ExecPath, RStag,
+};
 use super::nop_unit;
 use super::register::RegisterFile;
 use super::result_bus::ResultBus;
@@ -13,35 +15,20 @@ enum IssueResult {
 }
 
 #[derive(Debug)]
-pub enum BusAccess {
-    Read(u32),
-    Write(u32, u8),
-}
-
-#[derive(Debug)]
-struct BusAccessRequst {
-    request: BusAccess,
-    handler: String,
-}
-
-#[derive(Debug)]
 struct BusController {
     access_queue: Vec<BusAccessRequst>,
-    response_handler: Option<String>,
 }
 
 impl BusController {
     fn new() -> Self {
         Self {
             access_queue: Vec::new(),
-            response_handler: None,
         }
     }
-    fn push(&mut self, request: BusAccess, handler: String) {
-        self.access_queue.push(BusAccessRequst { request, handler });
+    fn push(&mut self, request: BusAccessRequst) {
+        self.access_queue.push(request);
     }
 }
-
 #[derive(Debug)]
 pub struct Processor {
     pc: usize,
@@ -196,7 +183,7 @@ impl Processor {
         for (_, unit) in self.access_paths.iter_mut() {
             unit.next_cycle(&mut self.result_bus)?;
             if let Some(r) = unit.request() {
-                self.bus_controller.push(r, unit.name());
+                self.bus_controller.push(r);
             }
         }
 
@@ -218,23 +205,18 @@ impl Processor {
         info.push_str(&format!("{:?}", self.result_bus));
         info
     }
-    pub fn bus_access(&mut self) -> Option<BusAccess> {
+    pub fn bus_access(&mut self) -> Option<BusAccessRequst> {
         let controller = &mut self.bus_controller;
         let request = controller.access_queue.pop()?;
-        controller.response_handler = Some(request.handler);
-        Some(request.request)
+        Some(request)
     }
-    pub fn resolve_access(&mut self, response: u8) -> Result<(), String> {
-        let handler = self
-            .bus_controller
-            .response_handler
-            .take()
-            .ok_or(String::from("Missing respone handler"))?;
+    pub fn resolve_access(&mut self, result: BusAccessResponse) -> Result<(), String> {
+        let path = result.path_name();
         let unit = self
             .access_paths
-            .get_mut(&handler)
-            .ok_or(format!("Handler {} not found", handler))?;
-        unit.resolve(response);
+            .get_mut(&path)
+            .ok_or(format!("Path {} not found", path))?;
+        unit.response(result);
         Ok(())
     }
 }
