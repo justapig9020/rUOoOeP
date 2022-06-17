@@ -202,6 +202,10 @@ impl Processor {
             info.push_str(&p.dump());
             info.push('\n');
         });
+        self.access_paths.iter().for_each(|(_, p)| {
+            info.push_str(&p.dump());
+            info.push('\n');
+        });
         info.push_str(&format!("{:?}", self.result_bus));
         info
     }
@@ -210,13 +214,20 @@ impl Processor {
         let request = controller.access_queue.pop()?;
         Some(request)
     }
-    pub fn resolve_access(&mut self, result: BusAccessResponse) -> Result<(), String> {
-        let path = result.path_name();
+    pub fn resolve_access(&mut self, reponse: BusAccessResponse) -> Result<(), String> {
+        let path = reponse.path_name();
+        let slot = reponse.slot();
+
         let unit = self
             .access_paths
             .get_mut(&path)
             .ok_or(format!("Path {} not found", path))?;
-        unit.response(result);
+        unit.response(slot, reponse.into_result());
         Ok(())
+    }
+    pub fn peek_registers(&self) -> Vec<ArgState> {
+        let rf = &self.register_file;
+        let size = rf.size();
+        (0..size).map(|i| rf.read(i)).collect()
     }
 }

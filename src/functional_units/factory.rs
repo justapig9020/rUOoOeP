@@ -1,10 +1,12 @@
 use super::arthmatic_unit;
 use crate::core::execution_path::ExecPath;
+use crate::functional_units::memory_access_unit;
 use std::collections::HashMap;
 
 #[derive(Hash, std::cmp::PartialEq, std::cmp::Eq, Clone, Copy)]
 pub enum Function {
     Arthmatic,
+    MemoryAccess,
 }
 
 /// A factory used to construct functional units
@@ -30,6 +32,7 @@ impl Factory {
         };
         match func {
             Arthmatic => Box::new(arthmatic_unit::Unit::new(index)),
+            MemoryAccess => Box::new(memory_access_unit::Unit::new(index)),
         }
     }
 }

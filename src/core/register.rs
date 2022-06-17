@@ -102,4 +102,8 @@ impl RegisterFile {
         }
         ret
     }
+    /// Return size of the registerfile, in other words, the register count.
+    pub fn size(&self) -> usize {
+        self.entry.len()
+    }
 }

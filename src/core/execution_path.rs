@@ -1,3 +1,5 @@
+use crate::util::raw_to_u32_big_endian;
+
 use super::decoder::InstFormat;
 use super::result_bus::ResultBus;
 use std::clone::Clone;
@@ -8,7 +10,7 @@ use std::fmt::{self, Debug, Display};
 /// There are two states
 /// 1. Waiting(tag): waiting for reault of `tag` to resolve dependency.
 /// 2. Ready(value): all dependencies have been resolve and ready to go.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ArgState {
     Waiting(RStag),
     Ready(u32),
@@ -33,6 +35,13 @@ impl ArgState {
         match self {
             ArgState::Waiting(_) => None,
             ArgState::Ready(val) => Some(*val),
+        }
+    }
+    pub fn forwarding(&mut self, tag: &RStag, val: u32) {
+        if let ArgState::Waiting(wait) = self {
+            if *wait == *tag {
+                *self = ArgState::Ready(val);
+            }
         }
     }
 }
@@ -83,12 +92,19 @@ impl RStag {
 #[derive(Debug)]
 pub enum ExecResult {
     Arth(u32),
+    MemLoad(Vec<u8>),
+    MemStore,
+    Err(String),
 }
 
 impl ExecResult {
     pub fn val(&self) -> u32 {
         match self {
             ExecResult::Arth(val) => *val,
+            ExecResult::MemLoad(val) => raw_to_u32_big_endian(val),
+            ExecResult::MemStore => 0,
+            /// TODO: Improve error handling
+            ExecResult::Err(msg) => panic!("Result Bus Error: {}", msg),
         }
     }
 }
@@ -104,6 +120,7 @@ pub trait ExecPath: Debug {
     /// Issue a instruction to the execution path.
     /// On success, [Ok] with tag of issued reservation station returned.
     /// Otherwise, [Err] returned.
+    /// If the issued instruction has no regiter to writeback, the contant of RStag is undefined.
     fn try_issue(&mut self, inst: String, vals: &[ArgState]) -> Result<RStag, ()>;
     fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String>;
     /// Return pending instruction count
@@ -115,9 +132,15 @@ pub trait ExecPath: Debug {
 #[derive(Debug)]
 pub enum BusAccess {
     /// Read(base address, length)
-    Read(u32, usize),
+    Load(u32, usize),
     /// Write(base address, data string)
-    Write(u32, Vec<u8>),
+    Store(u32, Vec<u8>),
+}
+
+#[derive(Debug)]
+pub enum BusAccessResult {
+    Load(Vec<u8>),
+    Store,
 }
 
 /// Handler of a Bus access
@@ -125,6 +148,7 @@ pub enum BusAccess {
 #[derive(Debug)]
 struct BusAccessHandler {
     path: String,
+    slot: usize,
 }
 
 impl BusAccessHandler {
@@ -140,12 +164,24 @@ pub struct BusAccessRequst {
 }
 
 impl BusAccessRequst {
+    pub fn new_load(path: String, slot: usize, address: u32, len: usize) -> Self {
+        Self {
+            access: BusAccess::Load(address, len),
+            handler: BusAccessHandler { path, slot },
+        }
+    }
+    pub fn new_store(path: String, slot: usize, address: u32, value: Vec<u8>) -> Self {
+        Self {
+            access: BusAccess::Store(address, value),
+            handler: BusAccessHandler { path, slot },
+        }
+    }
     /// Get access command from the request
     pub fn request(&self) -> &BusAccess {
         &self.access
     }
     /// Submit a result and consume the BusAccess Request then construct corresponding BusAccessResponse
-    pub fn into_respose(self, result: Result<Vec<u8>, String>) -> BusAccessResponse {
+    pub fn into_respose(self, result: Result<BusAccessResult, String>) -> BusAccessResponse {
         BusAccessResponse {
             result,
             handler: self.handler,
@@ -155,7 +191,7 @@ impl BusAccessRequst {
 
 #[derive(Debug)]
 pub struct BusAccessResponse {
-    result: Result<Vec<u8>, String>,
+    result: Result<BusAccessResult, String>,
     handler: BusAccessHandler,
 }
 
@@ -163,9 +199,15 @@ impl BusAccessResponse {
     pub fn path_name(&self) -> String {
         self.handler.paht_name()
     }
+    pub fn slot(&self) -> usize {
+        self.handler.slot
+    }
+    pub fn into_result(self) -> Result<BusAccessResult, String> {
+        self.result
+    }
 }
 
 pub trait AccessPath: ExecPath {
     fn request(&mut self) -> Option<BusAccessRequst>;
-    fn response(&mut self, result: BusAccessResponse);
+    fn response(&mut self, slot: usize, result: Result<BusAccessResult, String>);
 }

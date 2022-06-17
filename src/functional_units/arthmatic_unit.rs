@@ -36,8 +36,8 @@ impl ExecPath for Unit {
         ]
     }
     fn forward(&mut self, tag: RStag, val: u32) {
-        let inst_from = tag.station();
-        if self.name() == inst_from {
+        let inst_src = tag.station();
+        if self.name() == inst_src {
             let idx = tag.slot();
             self.station.sloved(idx);
         }
@@ -66,7 +66,7 @@ impl ExecPath for Unit {
         Ok(())
     }
     fn pending(&self) -> usize {
-        self.station.pending()
+        self.station.occupied()
     }
     fn dump(&self) -> String {
         let mut info = format!("{}\n", self.name);
@@ -158,16 +158,8 @@ impl RenamedInst for ArthInst {
         matches!(self.arg0, Ready(_)) && matches!(self.arg1, Ready(_))
     }
     fn forwarding(&mut self, tag: &RStag, val: u32) {
-        if let ArgState::Waiting(wait) = self.arg0.clone() {
-            if wait == *tag {
-                self.arg0 = ArgState::Ready(val);
-            }
-        }
-        if let ArgState::Waiting(wait) = self.arg1.clone() {
-            if wait == *tag {
-                self.arg1 = ArgState::Ready(val);
-            }
-        }
+        self.arg0.forwarding(tag, val);
+        self.arg1.forwarding(tag, val);
     }
 }
 
