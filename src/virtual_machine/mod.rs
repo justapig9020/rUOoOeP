@@ -208,7 +208,7 @@ mod vm {
             "addi R1, R0, #0",
             "addi R2, R0, #10",
             "sw R1, R2, #0", // j = 0, &j == 10
-            "sw R1, R2, #4", // k = 0, &k == 14
+            "sw R1, R2, #4", // k = 0, &k == 15
             "addi R3, R0, #4",
             "addi R4, R0, #5",
             // First iteration
@@ -216,21 +216,21 @@ mod vm {
             "add R1, R3, R1", // j += 4
             "sw R1, R2, #0",
             "lw R1, R2, #4",
-            "add R1, R4, R1", // k += 4
+            "add R1, R4, R1", // k += 5
             "sw R1, R2, #4",
             // Second iteration
             "lw R1, R2, #0",
             "add R1, R3, R1", // j += 4
             "sw R1, R2, #0",
             "lw R1, R2, #4",
-            "add R1, R4, R1", // k += 4
+            "add R1, R4, R1", // k += 5
             "sw R1, R2, #4",
             // Third iteration
             "lw R1, R2, #0",
             "add R1, R3, R1", // j += 4
             "sw R1, R2, #0",
             "lw R1, R2, #4",
-            "add R1, R4, R1", // k += 4
+            "add R1, R4, R1", // k += 5
             "sw R1, R2, #4",
             "nop",
             "nop",
