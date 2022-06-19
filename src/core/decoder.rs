@@ -149,7 +149,7 @@ impl Decoder {
                 let stations = list.station.borrow();
                 (*stations).clone()
             })
-            .ok_or(String::from("Suitable reservation station not found"))
+            .ok_or_else(|| String::from("Suitable reservation station not found"))
     }
     /// Decode row arguments by given syntax.
     /// On success, [Ok] with a two tuple returned.
@@ -220,7 +220,7 @@ impl Decoder {
 /// Argument scanner. Scan argument string and turn into [ArgType] (Token type).
 fn arg_scan(row_arg: &str) -> Result<ArgType, String> {
     let mut chars = row_arg.chars();
-    let prefix = chars.nth(0).unwrap();
+    let prefix = chars.next().unwrap();
     let token = chars.as_str();
     if prefix == 'r' || prefix == 'R' {
         if let Ok(idx) = token.parse() {

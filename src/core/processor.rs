@@ -107,9 +107,8 @@ impl Processor {
         result
             .map(|(tag, result)| (tag, result.val()))
             .and_then(forward)
-            .and_then(|(tag, val)| {
+            .map(|(tag, val)| {
                 self.register_file.write(tag, val);
-                Some(())
             })
             .is_some()
     }
@@ -243,6 +242,8 @@ impl Processor {
         unit.response(slot, reponse.into_result());
         Ok(())
     }
+    #[allow(dead_code)]
+    /// This function is used to testing
     pub fn peek_registers(&self) -> Vec<ArgState> {
         let rf = &self.register_file;
         let size = rf.size();

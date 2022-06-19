@@ -103,7 +103,7 @@ impl ExecResult {
             ExecResult::Arth(val) => *val,
             ExecResult::MemLoad(val) => raw_to_u32_big_endian(val),
             ExecResult::MemStore => 0,
-            /// TODO: Improve error handling
+            // TODO: Improve error handling
             ExecResult::Err(msg) => panic!("Result Bus Error: {}", msg),
         }
     }

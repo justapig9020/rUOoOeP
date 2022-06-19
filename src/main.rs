@@ -91,8 +91,9 @@ fn main() -> Result<(), String> {
 
     println!("{:?}", result);
 
-    let (p, dram) = vm.splite_into_processor_and_dram();
+    let (p, dram) = vm.splite();
     println!("Emulation finished");
+    println!("{:#?}", p);
     println!("{:?}", dram);
     Ok(())
 }

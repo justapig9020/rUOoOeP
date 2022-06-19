@@ -5,29 +5,30 @@ use crate::{
     core::{
         decoder::{InstFormat, TokenType},
         execution_path::{
-            AccessPath, ArgState, BusAccessRequst, BusAccessResponse, BusAccessResult, ExecPath,
-            ExecResult, RStag,
+            AccessPath, ArgState, BusAccessRequst, BusAccessResult, ExecPath, ExecResult, RStag,
         },
         result_bus::ResultBus,
     },
     display::into_table,
     functional_units::reservation_station::SlotState,
-    util::{queue::Queue, raw_to_u32_big_endian, u32_to_raw_big_endian},
+    util::{queue::Queue, u32_to_raw_big_endian},
 };
 
 use super::reservation_station::{RenamedInst, ReservationStation};
 
-const FUNC: &str = "mem_access";
+const FUNCTION_NAME: &str = "mem_access";
 const LOAD_STATION_SIZE: usize = 4;
 const STORE_STATION_SIZE: usize = 4;
 const PENDING_CAPACITY: usize = LOAD_STATION_SIZE + STORE_STATION_SIZE;
 
+/// Used to indicate type of access request
 #[derive(Clone, Copy)]
 enum AccessType {
     Load,
     Store,
 }
 
+/// Check wheither address of two requests are overlaping or not
 fn access_overlap(a: &Range<u32>, b: &Range<u32>) -> bool {
     !(a.end <= b.start || a.start >= b.end)
 }
@@ -89,6 +90,12 @@ fn get_access_range(inst: &str, base: u32) -> Range<u32> {
 }
 
 impl AccessType {
+    /// Parse access type and length from raw instruction
+    /// This function returns (access type, length) tuple
+    ///
+    /// # panics
+    ///
+    /// The function will panic once it's unable to parse the given instruction
     fn parse(inst: &str) -> (Self, usize) {
         let mut chars = inst.chars();
         let type_identifier = chars.next().expect("Missing access type");
@@ -122,7 +129,7 @@ impl Display for MemAddress {
 }
 
 impl MemAddress {
-    fn from_args(base: ArgState, offset: ArgState) -> Self {
+    fn new(base: ArgState, offset: ArgState) -> Self {
         if let ArgState::Ready(offset) = offset {
             MemAddress::Evaluating(base, offset)
         } else {
@@ -135,6 +142,7 @@ impl MemAddress {
             arg.forwarding(tag, val);
         }
     }
+    /// Return arguments of the object
     fn arguments(&self) -> Vec<ArgState> {
         use MemAddress::*;
         match self {
@@ -142,6 +150,9 @@ impl MemAddress {
             Evaluating(arg, _) => vec![arg.clone()],
         }
     }
+    /// Check wheither base register is ready for evaluation or not
+    /// If base register is ready, (base, offset) returned
+    /// Other wise None returned
     fn ready_for_evaluation(&self) -> Option<(u32, u32)> {
         match self {
             MemAddress::Evaluated(base) => Some((*base, 0)),
@@ -154,9 +165,11 @@ impl MemAddress {
 }
 
 #[derive(Debug)]
-/// Arguments of different memory access instruction
+/// Arguments of different kinds of memory access instruction
 enum AccessArgs {
+    /// Load(Base address)
     Load(MemAddress),
+    /// Store(Value, Base address)
     Store(ArgState, MemAddress),
 }
 
@@ -174,12 +187,14 @@ impl Display for AccessArgs {
 }
 
 impl AccessArgs {
+    /// Construct AccessArgs by given type and arguments
     fn new(access_type: AccessType, renamed_args: &[ArgState]) -> Self {
         match access_type {
             AccessType::Load => AccessArgs::new_load(renamed_args),
             AccessType::Store => AccessArgs::new_store(renamed_args),
         }
     }
+    /// Construct a new `AccessArgs::Load` by given arguments
     fn new_load(renamed_args: &[ArgState]) -> Self {
         let expect_arg_cnt = 2;
         if renamed_args.len() != expect_arg_cnt {
@@ -192,9 +207,10 @@ impl AccessArgs {
 
         let base = renamed_args[0].clone();
         let offset = renamed_args[1].clone();
-        let source = MemAddress::from_args(base, offset);
+        let source = MemAddress::new(base, offset);
         AccessArgs::Load(source)
     }
+    /// Construct a new `AccessArgs::Load` by given arguments
     fn new_store(renamed_args: &[ArgState]) -> Self {
         let expect_arg_cnt = 3;
         if renamed_args.len() != expect_arg_cnt {
@@ -209,9 +225,10 @@ impl AccessArgs {
         let base = renamed_args[1].clone();
         let offset = renamed_args[2].clone();
 
-        let destination = MemAddress::from_args(base, offset);
+        let destination = MemAddress::new(base, offset);
         AccessArgs::Store(source, destination)
     }
+    /// Forward value of given tag to `MemAddress` member
     fn forwarding(&mut self, tag: &RStag, val: u32) {
         match self {
             AccessArgs::Load(src) => src.forwarding(tag, val),
@@ -221,6 +238,10 @@ impl AccessArgs {
             }
         }
     }
+    /// Return all `ArgState` including in the object
+    /// The order of returned vector is:
+    /// For Load: [Base]
+    /// For Store: [Value, Base]
     fn arguments(&self) -> Vec<ArgState> {
         match self {
             AccessArgs::Load(src) => src.arguments(),
@@ -231,7 +252,8 @@ impl AccessArgs {
             }
         }
     }
-    fn evaluated(&mut self, base: u32) {
+    /// Update base address to evaluated value
+    fn update_base_address(&mut self, base: u32) {
         let address = match self {
             AccessArgs::Load(address) => address,
             AccessArgs::Store(_, address) => address,
@@ -240,7 +262,9 @@ impl AccessArgs {
             *address = MemAddress::Evaluated(base);
         }
     }
-    fn read_for_evaluation(&self) -> Option<(u32, u32)> {
+    /// (base, offset) returned if base address is ready
+    /// Otherwise, None returned
+    fn ready_for_evaluation(&self) -> Option<(u32, u32)> {
         let address = match self {
             AccessArgs::Load(address) => address,
             AccessArgs::Store(_, address) => address,
@@ -249,6 +273,7 @@ impl AccessArgs {
     }
 }
 
+// TODO: update comment
 #[derive(Debug)]
 struct AccessInst {
     name: String,
@@ -283,10 +308,10 @@ impl AccessInst {
     }
     fn evaluated(&mut self, base: u32, dependiencies: Vec<RStag>) {
         self.dependencies = dependiencies;
-        self.args.evaluated(base);
+        self.args.update_base_address(base);
     }
     fn read_for_evaluation(&self) -> Option<(u32, u32)> {
-        self.args.read_for_evaluation()
+        self.args.ready_for_evaluation()
     }
 }
 
@@ -391,7 +416,7 @@ pub struct Unit {
 impl Unit {
     pub fn new(idx: usize) -> Self {
         Self {
-            name: format!("{}{}", FUNC, idx),
+            name: format!("{}{}", FUNCTION_NAME, idx),
             evaluation_queue: Queue::new(PENDING_CAPACITY),
             evaluating: None,
             load_station: ReservationStation::new(LOAD_STATION_SIZE),
@@ -475,7 +500,7 @@ impl Unit {
         let (reserved_id, mut issuing) = self
             .evaluation_queue
             .pop()
-            .ok_or(String::from("Expect instruction in evaluating queue while issuing instruction to reservation station"))?;
+            .ok_or_else(||String::from("Expect instruction in evaluating queue while issuing instruction to reservation station"))?;
 
         let (access_type, len) = AccessType::parse(issuing.name());
         let access_range = evaluated_base..evaluated_base + len as u32;
@@ -500,7 +525,7 @@ impl ExecPath for Unit {
         self.name.clone()
     }
     fn function(&self) -> String {
-        String::from(FUNC)
+        String::from(FUNCTION_NAME)
     }
     fn list_insts(&self) -> Vec<InstFormat> {
         vec![
@@ -568,13 +593,10 @@ impl ExecPath for Unit {
                 self.issue_evaluated_instruction_to_station(evaluated_base)?;
                 self.evaluating = None;
             }
-        } else {
-            if let Some((_, to_evaluate)) = self.evaluation_queue.head() {
-                if let Some((base, offset)) = to_evaluate.read_for_evaluation() {
-                    let evaluation =
-                        EvaluationUnit::exec(to_evaluate.name().to_string(), base, offset);
-                    self.evaluating = Some(evaluation);
-                }
+        } else if let Some((_, to_evaluate)) = self.evaluation_queue.head() {
+            if let Some((base, offset)) = to_evaluate.read_for_evaluation() {
+                let evaluation = EvaluationUnit::exec(to_evaluate.name().to_string(), base, offset);
+                self.evaluating = Some(evaluation);
             }
         }
         if bus.is_free() {

@@ -39,7 +39,6 @@ impl Factory {
         };
         match func {
             Arthmatic => Box::new(arthmatic_unit::Unit::new(index)),
-            MemoryAccess => Box::new(memory_access_unit::Unit::new(index)),
         }
     }
     pub fn new_mem_unit(&mut self, func: MemFunction) -> Box<dyn AccessPath> {

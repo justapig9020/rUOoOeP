@@ -91,6 +91,7 @@ impl Machine {
             dram: Dram::new(ram_size),
         }
     }
+    /// Execute next machine cycle of virtual machine
     pub fn next_cycle(&mut self) -> Result<(), String> {
         let p = &mut self.core;
         let line = p.fetch_address();
@@ -110,9 +111,7 @@ impl Machine {
             BusAccess::Load(base, len) => {
                 let base = *base as usize;
                 let len = *len as usize;
-                self.dram
-                    .read(base, len)
-                    .map(|value| BusAccessResult::Load(value))
+                self.dram.read(base, len).map(BusAccessResult::Load)
             }
             BusAccess::Store(base, data) => self
                 .dram
@@ -121,10 +120,8 @@ impl Machine {
         };
         access.into_respose(result)
     }
-    pub fn into_processor(self) -> Processor {
-        self.core
-    }
-    pub fn splite_into_processor_and_dram(self) -> (Processor, Vec<u8>) {
+    /// Splite virtual machine into components
+    pub fn splite(self) -> (Processor, Vec<u8>) {
         (self.core, self.dram.into_raw_data())
     }
 }
@@ -182,7 +179,7 @@ mod vm {
         let mut vm = Machine::new(p, program, 0);
 
         while vm.next_cycle().is_ok() {}
-        let p = vm.into_processor();
+        let (p, _) = vm.splite();
         let result = p.peek_registers();
         for (r, e) in result.iter().zip(reg_expect.iter()) {
             assert_eq!(r, e);
@@ -279,7 +276,7 @@ mod vm {
         let mut vm = Machine::new(p, program, 200);
         while vm.next_cycle().is_ok() {}
 
-        let (_processor, dram) = vm.splite_into_processor_and_dram();
+        let (_processor, dram) = vm.splite();
 
         let assert = |expect: (u32, u32)| {
             let expect_value = expect.0;
