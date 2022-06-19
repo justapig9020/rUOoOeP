@@ -134,6 +134,7 @@ mod vm {
     use crate::core::execution_path::ArgState;
     use crate::functional_units::factory::Factory;
     use crate::functional_units::factory::Function;
+    use crate::functional_units::factory::MemFunction;
     use crate::util::raw_to_u32_big_endian;
 
     use super::*;
@@ -272,8 +273,8 @@ mod vm {
             p.add_path(unit)?;
         }
 
-        let unit = ff.new_unit(Function::MemoryAccess);
-        p.add_path(unit)?;
+        let unit = ff.new_mem_unit(MemFunction::MemoryAccess);
+        p.add_mem_path(unit)?;
 
         let mut vm = Machine::new(p, program, 200);
         while vm.next_cycle().is_ok() {}

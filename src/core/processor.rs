@@ -75,6 +75,17 @@ impl Processor {
             self.decoder.register(insts, name)
         }
     }
+    pub fn add_mem_path(&mut self, func: Box<dyn AccessPath>) -> Result<(), String> {
+        let insts = func.list_insts();
+        let name = func.name();
+
+        if let Some(prev) = self.access_paths.insert(name.clone(), func) {
+            let msg = format!("Already has a execution path with name {}", prev.name());
+            Err(msg)
+        } else {
+            self.decoder.register(insts, name)
+        }
+    }
     /// Return fetching address.
     pub fn fetch_address(&self) -> usize {
         self.pc
@@ -127,6 +138,13 @@ impl Processor {
 
         for (name, _) in stations.iter() {
             let station = self.arthmatic_paths.get_mut(*name);
+            if let Some(station) = station {
+                let slot_tag = station.try_issue(inst.name(), renamed_args);
+                if let Ok(tag) = slot_tag {
+                    return IssueResult::Issued(tag);
+                }
+            }
+            let station = self.access_paths.get_mut(*name);
             if let Some(station) = station {
                 let slot_tag = station.try_issue(inst.name(), renamed_args);
                 if let Ok(tag) = slot_tag {

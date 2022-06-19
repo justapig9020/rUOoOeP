@@ -112,6 +112,15 @@ enum MemAddress {
     Evaluating(ArgState, u32),
 }
 
+impl Display for MemAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MemAddress::Evaluated(address) => write!(f, "{}", address),
+            MemAddress::Evaluating(base, offset) => write!(f, "{} + {}", base, offset),
+        }
+    }
+}
+
 impl MemAddress {
     fn from_args(base: ArgState, offset: ArgState) -> Self {
         if let ArgState::Ready(offset) = offset {
@@ -149,6 +158,19 @@ impl MemAddress {
 enum AccessArgs {
     Load(MemAddress),
     Store(ArgState, MemAddress),
+}
+
+impl Display for AccessArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AccessArgs::Load(address) => {
+                write!(f, "Load({})", address)
+            }
+            AccessArgs::Store(value, address) => {
+                write!(f, "{}; {}", value, address)
+            }
+        }
+    }
 }
 
 impl AccessArgs {
@@ -236,13 +258,7 @@ struct AccessInst {
 
 impl Display for AccessInst {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}; {:?}; {:?}",
-            self.name(),
-            self.args,
-            self.dependencies
-        )
+        write!(f, "{}; {}; {:?}", self.name(), self.args, self.dependencies)
     }
 }
 
@@ -396,9 +412,9 @@ impl Unit {
     }
     fn logical_slot_id_to_physical(logical_id: usize) -> (AccessType, usize) {
         if logical_id >= LOAD_STATION_SIZE {
-            (AccessType::Load, logical_id - LOAD_STATION_SIZE)
+            (AccessType::Store, logical_id - LOAD_STATION_SIZE)
         } else {
-            (AccessType::Store, logical_id)
+            (AccessType::Load, logical_id)
         }
     }
     fn evaluating_queue_forward(&mut self, tag: &RStag, val: u32) {
@@ -533,16 +549,16 @@ impl ExecPath for Unit {
 
         // Reserve might failed due to no empty slot
         let phy_id = issue_dest.reserve().ok_or(())?;
-        let logical_slot_id = Unit::physical_slot_id_to_logical(phy_id, access_type);
 
         /*
          * Evaluating queue's capacity equal to load station's capacity plus store station's capacity
          * Since we have allocated a slot in one of the station, there should has at least one slot in evaluating queue
          */
         self.evaluation_queue
-            .insert((logical_slot_id, inst))
+            .insert((phy_id, inst))
             .expect("Evaluating queue never overflow");
 
+        let logical_slot_id = Unit::physical_slot_id_to_logical(phy_id, access_type);
         Ok(RStag::new(&self.name, logical_slot_id))
     }
     fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String> {
@@ -577,7 +593,7 @@ impl ExecPath for Unit {
         let slots: Vec<String> = self
             .evaluation_queue
             .into_iter()
-            .map(|(s, i)| format!("{}: {:?}", s, i))
+            .map(|(s, i)| format!("{}: {}", s, i))
             .collect();
         info.push_str(&into_table("Evaluating", slots));
         let slots: Vec<String> = self.load_station.dump();
@@ -590,8 +606,9 @@ impl ExecPath for Unit {
 
 impl AccessPath for Unit {
     fn request(&mut self) -> Option<BusAccessRequst> {
+        let path = self.name();
         let store_pending = self.store_station.pending();
-        let load_pending = self.store_station.pending();
+        let load_pending = self.load_station.pending();
 
         let (station, access_type) = if store_pending < load_pending {
             (&mut self.load_station, AccessType::Load)
@@ -620,7 +637,6 @@ impl AccessPath for Unit {
                 })
                 .collect();
 
-            let path = self.name();
             let request = match access_type {
                 AccessType::Load => {
                     let address = args.get(0).expect("Address not found");
@@ -633,6 +649,9 @@ impl AccessPath for Unit {
                     BusAccessRequst::new_store(path, logical_id, *address, value)
                 }
             };
+            station
+                .start_execute(slot_id)
+                .unwrap_or_else(|msg| panic!("{}", msg));
             Some(request)
         } else {
             None

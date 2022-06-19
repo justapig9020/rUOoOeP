@@ -6,7 +6,7 @@ mod graph;
 mod util;
 mod virtual_machine;
 use crate::core::processor::Processor;
-use crate::functional_units::factory::{Factory, Function};
+use crate::functional_units::factory::{Factory, Function, MemFunction};
 use std::io;
 
 fn main() -> Result<(), String> {
@@ -78,8 +78,8 @@ fn main() -> Result<(), String> {
         let unit = ff.new_unit(Function::Arthmatic);
         p.add_path(unit)?;
     }
-    let unit = ff.new_unit(Function::MemoryAccess);
-    p.add_path(unit);
+    let unit = ff.new_mem_unit(MemFunction::MemoryAccess);
+    p.add_mem_path(unit)?;
     let mut vm = virtual_machine::Machine::new(p, program, 20);
 
     let mut result = vm.next_cycle();
