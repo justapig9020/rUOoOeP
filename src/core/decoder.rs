@@ -113,7 +113,7 @@ impl Decoder {
          */
         if let Some(station_list) = self.stations.get_mut(&inst_list[0].name) {
             /* There is a set of stations have implemented the inserting instruction.
-             * We assuem they are congruent.
+             * We assume they are congruent.
              */
             /* Since all instruction of the set mapping into a same station list,
              * we dont have to do insert for every instruction mapping.

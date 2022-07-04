@@ -610,19 +610,22 @@ impl ExecPath for Unit {
     fn pending(&self) -> usize {
         self.evaluation_queue.len()
     }
-    fn dump(&self) -> String {
-        let mut info = format!("{}\n", self.name);
+}
+
+impl Display for Unit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.name)?;
         let slots: Vec<String> = self
             .evaluation_queue
             .into_iter()
             .map(|(s, i)| format!("{}: {}", s, i))
             .collect();
-        info.push_str(&into_table("Evaluating", slots));
+        writeln!(f, "{}", into_table("Evaluating", slots))?;
         let slots: Vec<String> = self.load_station.dump();
-        info.push_str(&into_table("Load station", slots));
+        writeln!(f, "{}", into_table("Load station", slots))?;
         let slots: Vec<String> = self.store_station.dump();
-        info.push_str(&into_table("Store station", slots));
-        info
+        writeln!(f, "{}", &into_table("Store station", slots))?;
+        Ok(())
     }
 }
 

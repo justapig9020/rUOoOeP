@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use super::decoder::InstFormat;
 use super::execution_path::{ArgState, ExecPath, RStag};
 use super::result_bus::ResultBus;
@@ -40,7 +42,10 @@ impl ExecPath for Unit {
     fn pending(&self) -> usize {
         1
     }
-    fn dump(&self) -> String {
-        String::new()
+}
+
+impl Display for Unit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
     }
 }

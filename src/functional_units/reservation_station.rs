@@ -42,6 +42,18 @@ pub struct ReservationStation {
     slots: Vec<SlotState>,
 }
 
+impl Display for SlotState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let info = match self {
+            SlotState::Empty => String::from("Empty"),
+            SlotState::Executing(inst) => format!("Exe({})", inst),
+            SlotState::Pending(inst) => format!("Pend({})", inst),
+            SlotState::Reserved => String::from("Reserved"),
+        };
+        write!(f, "{info}")
+    }
+}
+
 #[cfg(test)]
 mod resrvation_station {
     use super::*;

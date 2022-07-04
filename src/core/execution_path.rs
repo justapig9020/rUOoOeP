@@ -109,7 +109,7 @@ impl ExecResult {
     }
 }
 
-pub trait ExecPath: Debug {
+pub trait ExecPath: Debug + Display {
     fn name(&self) -> String;
     /// Return name of class of fucntional unit.
     fn function(&self) -> String;
@@ -125,7 +125,6 @@ pub trait ExecPath: Debug {
     fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String>;
     /// Return pending instruction count
     fn pending(&self) -> usize;
-    fn dump(&self) -> String;
 }
 
 /// Bus access command

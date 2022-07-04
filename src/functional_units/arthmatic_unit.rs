@@ -68,16 +68,24 @@ impl ExecPath for Unit {
     fn pending(&self) -> usize {
         self.station.occupied()
     }
-    fn dump(&self) -> String {
-        let mut info = format!("{}\n", self.name);
-        let slots: Vec<String> = self.station.dump();
-        info.push_str(&into_table("Reservation station", slots));
+}
+
+impl Display for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self.name)?;
+
+        let slots: Vec<String> = self
+            .station
+            .into_iter()
+            .map(|slot| format!("{}", slot))
+            .collect();
+        writeln!(f, "{}", into_table("Reservation station", slots))?;
         if let Some(exec) = self.exec.as_ref() {
             let exec = exec.to_string();
             let table = into_table("Executing", vec![exec]);
-            info.push_str(&table);
+            writeln!(f, "{table}")?;
         }
-        info
+        Ok(())
     }
 }
 

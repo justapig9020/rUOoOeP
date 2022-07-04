@@ -42,8 +42,20 @@ pub struct Processor {
 
 impl fmt::Display for Processor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let info = self.print();
-        write!(f, "{}", info)
+        let mut registers = vec![format!("PC: {}", self.pc)];
+        self.register_file.into_iter().for_each(|reg| {
+            registers.push(format!("{}", reg));
+        });
+        let last_instruction = self.decoder.last_instruction().to_string();
+        writeln!(f, "{}", into_table("Instruction", vec![last_instruction]))?;
+        writeln!(f, "{}", into_table("Registers", registers))?;
+        for (_, p) in self.arthmatic_paths.iter() {
+            writeln!(f, "{}", p)?;
+        }
+        for (_, p) in self.access_paths.iter() {
+            writeln!(f, "{}", p)?;
+        }
+        writeln!(f, "{:?}", self.result_bus)
     }
 }
 
@@ -206,25 +218,6 @@ impl Processor {
 
         self.pc = next_pc;
         Ok(())
-    }
-    fn print(&self) -> String {
-        let mut info = String::new();
-        let mut registers = vec![format!("PC: {}", self.pc)];
-        let mut gpr = self.register_file.dump();
-        registers.append(&mut gpr);
-        let last_instruction = self.decoder.last_instruction().to_string();
-        info.push_str(&into_table("Instruction", vec![last_instruction]));
-        info.push_str(&into_table("Registers", registers));
-        self.arthmatic_paths.iter().for_each(|(_, p)| {
-            info.push_str(&p.dump());
-            info.push('\n');
-        });
-        self.access_paths.iter().for_each(|(_, p)| {
-            info.push_str(&p.dump());
-            info.push('\n');
-        });
-        info.push_str(&format!("{:?}", self.result_bus));
-        info
     }
     pub fn bus_access(&mut self) -> Option<BusAccessRequst> {
         let controller = &mut self.bus_controller;

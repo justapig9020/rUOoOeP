@@ -1,5 +1,5 @@
 use super::execution_path::{ArgState, RStag};
-use std::default::Default;
+use std::{default::Default, fmt::Display};
 
 #[derive(Default, Debug)]
 /// Renamable register file
@@ -8,9 +8,20 @@ pub struct RegisterFile {
 }
 
 #[derive(Debug, Default)]
-struct Entry {
+pub struct Entry {
     val: u32,
     tag: Option<RStag>,
+}
+
+impl Display for Entry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.tag.as_ref() {
+            Some(tag) => {
+                write!(f, "{tag}")
+            }
+            None => write!(f, "{}", self.val),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -87,23 +98,19 @@ impl RegisterFile {
     pub fn rename(&mut self, idx: usize, tag: RStag) {
         self.entry[idx].tag = Some(tag);
     }
-    /// Dump content of registers as [String]
-    pub fn dump(&self) -> Vec<String> {
-        let size = self.entry.len();
-        let mut ret = Vec::with_capacity(size);
-        for reg in self.entry.iter() {
-            let content = match reg.tag.as_ref() {
-                Some(tag) => {
-                    format!("{}", tag)
-                }
-                None => reg.val.to_string(),
-            };
-            ret.push(content);
-        }
-        ret
-    }
     /// Return size of the registerfile, in other words, the register count.
     pub fn size(&self) -> usize {
         self.entry.len()
+    }
+    fn test(&self) {
+        let iter = self.entry.iter();
+    }
+}
+
+impl<'b> IntoIterator for &'b RegisterFile {
+    type IntoIter = std::slice::Iter<'b, Entry>;
+    type Item = &'b Entry;
+    fn into_iter(self) -> Self::IntoIter {
+        self.entry.iter()
     }
 }
