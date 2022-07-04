@@ -101,7 +101,7 @@ impl Decoder {
     }
     /// Register a mapping between instruction and
     pub fn register(&mut self, inst_list: Vec<InstFormat>, station: String) -> Result<(), String> {
-        if inst_list.len() == 0 {
+        if inst_list.is_empty() {
             return Ok(());
         }
 
@@ -127,7 +127,7 @@ impl Decoder {
             for inst in inst_list.iter() {
                 let name = &inst.name;
                 let exist = self.stations.insert(name.clone(), station.clone());
-                if let Some(_) = exist {
+                if exist.is_some() {
                     /* Some instruction has been mapped.
                      * Which means they are not disjoint, return an error
                      */
@@ -149,7 +149,7 @@ impl Decoder {
                 let stations = list.station.borrow();
                 (*stations).clone()
             })
-            .ok_or(String::from("Suitable reservation station not found"))
+            .ok_or_else(|| String::from("Suitable reservation station not found"))
     }
     /// Decode row arguments by given syntax.
     /// On success, [Ok] with a two tuple returned.
@@ -193,7 +193,7 @@ impl Decoder {
     pub fn decode(&mut self, inst: &str) -> Result<DecodedInst, String> {
         self.instruction = String::from(inst);
         let tokens = text_slicer(inst);
-        if tokens.len() == 0 {
+        if tokens.is_empty() {
             let msg = format!("No token has been found in instruction {}", inst);
             return Err(msg);
         }
@@ -220,7 +220,7 @@ impl Decoder {
 /// Argument scanner. Scan argument string and turn into [ArgType] (Token type).
 fn arg_scan(row_arg: &str) -> Result<ArgType, String> {
     let mut chars = row_arg.chars();
-    let prefix = chars.nth(0).unwrap();
+    let prefix = chars.next().unwrap();
     let token = chars.as_str();
     if prefix == 'r' || prefix == 'R' {
         if let Ok(idx) = token.parse() {
@@ -253,7 +253,7 @@ fn slicer_test() {
     assert_eq!(slice[4], "e");
 }
 /// Seperate row string to words by delimiters.
-fn text_slicer<'a>(txt: &'a str) -> Vec<&'a str> {
+fn text_slicer(txt: &str) -> Vec<&str> {
     let mut begin = 0;
     let mut v = Vec::new();
     let delimiters = [' ', ',', '(', ')', ':', '\n'];
@@ -277,13 +277,13 @@ struct StationList {
 }
 
 impl StationList {
-    fn new(name: &String) -> Self {
+    fn new(name: &str) -> Self {
         Self {
-            station: Rc::new(RefCell::new(vec![name.clone()])),
+            station: Rc::new(RefCell::new(vec![name.to_owned()])),
         }
     }
-    fn push(&mut self, name: &String) {
-        self.station.borrow_mut().push(name.clone());
+    fn push(&mut self, name: &str) {
+        self.station.borrow_mut().push(name.to_owned());
     }
 }
 
@@ -299,10 +299,10 @@ impl DecodedInst {
         self.name.clone()
     }
     // Return a vector of name of stations which can issue the instruction.
-    pub fn stations<'a>(&'a self) -> &'a Vec<String> {
+    pub fn stations(&self) -> &[String] {
         &self.stations
     }
-    pub fn arguments<'a>(&'a self) -> &'a Vec<ArgType> {
+    pub fn arguments(&self) -> &[ArgType] {
         &self.args
     }
     pub fn writeback(&self) -> Option<ArgType> {

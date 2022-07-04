@@ -36,8 +36,8 @@ impl ExecPath for Unit {
         ]
     }
     fn forward(&mut self, tag: RStag, val: u32) {
-        let inst_from = tag.station();
-        if self.name() == inst_from {
+        let inst_src = tag.station();
+        if self.name() == inst_src {
             let idx = tag.slot();
             self.station.sloved(idx);
         }
@@ -47,10 +47,7 @@ impl ExecPath for Unit {
         let inst = ArthInst::new(inst, renamed_args).map_err(|_| ())?;
         self.station
             .insert(inst as Box<dyn RenamedInst>)
-            .map(|idx| {
-                let tag = RStag::new(&self.name, idx);
-                tag
-            })
+            .map(|idx| RStag::new(&self.name, idx))
             .ok_or(())
     }
     fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String> {
@@ -69,7 +66,7 @@ impl ExecPath for Unit {
         Ok(())
     }
     fn pending(&self) -> usize {
-        self.station.pending()
+        self.station.occupied()
     }
     fn dump(&self) -> String {
         let mut info = format!("{}\n", self.name);
@@ -106,12 +103,12 @@ impl Unit {
                 .get(0)
                 .ok_or("There is no argument 0")?
                 .val()
-                .ok_or("Argument 0 is not ready".to_string())?;
+                .ok_or_else(|| "Argument 0 is not ready".to_string())?;
             let arg1 = args
                 .get(1)
                 .ok_or("There is no argument 0")?
                 .val()
-                .ok_or("Argument 1 is not ready".to_string())?;
+                .ok_or_else(|| "Argument 1 is not ready".to_string())?;
             let tag = RStag::new(&self.name(), slot_id);
             self.exec = Some(ExecUnit::exec(tag, name.to_string(), arg0, arg1));
             self.station.start_execute(slot_id)?;
@@ -161,16 +158,8 @@ impl RenamedInst for ArthInst {
         matches!(self.arg0, Ready(_)) && matches!(self.arg1, Ready(_))
     }
     fn forwarding(&mut self, tag: &RStag, val: u32) {
-        if let ArgState::Waiting(wait) = self.arg0.clone() {
-            if wait == *tag {
-                self.arg0 = ArgState::Ready(val);
-            }
-        }
-        if let ArgState::Waiting(wait) = self.arg1.clone() {
-            if wait == *tag {
-                self.arg1 = ArgState::Ready(val);
-            }
-        }
+        self.arg0.forwarding(tag, val);
+        self.arg1.forwarding(tag, val);
     }
 }
 

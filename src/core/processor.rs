@@ -1,5 +1,7 @@
 use super::decoder::{ArgType, DecodedInst, Decoder};
-use super::execution_path::{ArgState, ExecPath, RStag};
+use super::execution_path::{
+    AccessPath, ArgState, BusAccessRequst, BusAccessResponse, ExecPath, RStag,
+};
 use super::nop_unit;
 use super::register::RegisterFile;
 use super::result_bus::ResultBus;
@@ -13,10 +15,27 @@ enum IssueResult {
 }
 
 #[derive(Debug)]
+struct BusController {
+    access_queue: Vec<BusAccessRequst>,
+}
+
+impl BusController {
+    fn new() -> Self {
+        Self {
+            access_queue: Vec::new(),
+        }
+    }
+    fn push(&mut self, request: BusAccessRequst) {
+        self.access_queue.push(request);
+    }
+}
+#[derive(Debug)]
 pub struct Processor {
     pc: usize,
     decoder: Decoder,
-    paths: HashMap<String, Box<dyn ExecPath>>,
+    arthmatic_paths: HashMap<String, Box<dyn ExecPath>>,
+    access_paths: HashMap<String, Box<dyn AccessPath>>,
+    bus_controller: BusController,
     register_file: RegisterFile,
     result_bus: ResultBus,
 }
@@ -33,7 +52,9 @@ impl Processor {
         let mut ret = Self {
             pc: 0,
             decoder: Decoder::new(),
-            paths: HashMap::new(),
+            arthmatic_paths: HashMap::new(),
+            access_paths: HashMap::new(),
+            bus_controller: BusController::new(),
             register_file: RegisterFile::new(),
             result_bus: ResultBus::new(),
         };
@@ -47,7 +68,18 @@ impl Processor {
         let insts = func.list_insts();
         let name = func.name();
 
-        if let Some(prev) = self.paths.insert(name.clone(), func) {
+        if let Some(prev) = self.arthmatic_paths.insert(name.clone(), func) {
+            let msg = format!("Already has a execution path with name {}", prev.name());
+            Err(msg)
+        } else {
+            self.decoder.register(insts, name)
+        }
+    }
+    pub fn add_mem_path(&mut self, func: Box<dyn AccessPath>) -> Result<(), String> {
+        let insts = func.list_insts();
+        let name = func.name();
+
+        if let Some(prev) = self.access_paths.insert(name.clone(), func) {
             let msg = format!("Already has a execution path with name {}", prev.name());
             Err(msg)
         } else {
@@ -64,7 +96,10 @@ impl Processor {
     fn commit(&mut self) -> bool {
         let result = self.result_bus.take();
         let forward = |(tag, val): (RStag, u32)| -> Option<(RStag, u32)> {
-            for (_, station) in self.paths.iter_mut() {
+            for (_, station) in self.arthmatic_paths.iter_mut() {
+                station.forward(tag.clone(), val);
+            }
+            for (_, station) in self.access_paths.iter_mut() {
                 station.forward(tag.clone(), val);
             }
             Some((tag, val))
@@ -72,9 +107,8 @@ impl Processor {
         result
             .map(|(tag, result)| (tag, result.val()))
             .and_then(forward)
-            .and_then(|(tag, val)| {
+            .map(|(tag, val)| {
                 self.register_file.write(tag, val);
-                Some(())
             })
             .is_some()
     }
@@ -87,17 +121,29 @@ impl Processor {
         let mut stations = name_of_stations
             .iter()
             .map(|name| {
-                let station = self
-                    .paths
-                    .get(name)
-                    .unwrap_or_else(|| panic!("Station '{}' not found", name));
+                let arth = self.arthmatic_paths.get(name);
+                let access = self.access_paths.get(name);
+                let station = if let Some(s) = arth {
+                    &**s
+                } else if let Some(s) = access {
+                    &**s as &dyn ExecPath
+                } else {
+                    panic!("No path named {}", name);
+                };
                 (name, station.pending())
             })
             .collect::<Vec<(&String, usize)>>();
         stations.sort_by_key(|(_, p)| *p);
 
         for (name, _) in stations.iter() {
-            let station = self.paths.get_mut(*name);
+            let station = self.arthmatic_paths.get_mut(*name);
+            if let Some(station) = station {
+                let slot_tag = station.try_issue(inst.name(), renamed_args);
+                if let Ok(tag) = slot_tag {
+                    return IssueResult::Issued(tag);
+                }
+            }
+            let station = self.access_paths.get_mut(*name);
             if let Some(station) = station {
                 let slot_tag = station.try_issue(inst.name(), renamed_args);
                 if let Ok(tag) = slot_tag {
@@ -147,8 +193,15 @@ impl Processor {
             self.register_renaming(tag, inst)?;
         }
 
-        for (_, exec_unit) in self.paths.iter_mut() {
-            exec_unit.next_cycle(&mut self.result_bus)?;
+        for (_, unit) in self.arthmatic_paths.iter_mut() {
+            unit.next_cycle(&mut self.result_bus)?;
+        }
+
+        for (_, unit) in self.access_paths.iter_mut() {
+            unit.next_cycle(&mut self.result_bus)?;
+            if let Some(r) = unit.request() {
+                self.bus_controller.push(r);
+            }
         }
 
         self.pc = next_pc;
@@ -162,11 +215,38 @@ impl Processor {
         let last_instruction = self.decoder.last_instruction().to_string();
         info.push_str(&into_table("Instruction", vec![last_instruction]));
         info.push_str(&into_table("Registers", registers));
-        self.paths.iter().for_each(|(_, p)| {
+        self.arthmatic_paths.iter().for_each(|(_, p)| {
+            info.push_str(&p.dump());
+            info.push('\n');
+        });
+        self.access_paths.iter().for_each(|(_, p)| {
             info.push_str(&p.dump());
             info.push('\n');
         });
         info.push_str(&format!("{:?}", self.result_bus));
         info
+    }
+    pub fn bus_access(&mut self) -> Option<BusAccessRequst> {
+        let controller = &mut self.bus_controller;
+        let request = controller.access_queue.pop()?;
+        Some(request)
+    }
+    pub fn resolve_access(&mut self, reponse: BusAccessResponse) -> Result<(), String> {
+        let path = reponse.path_name();
+        let slot = reponse.slot();
+
+        let unit = self
+            .access_paths
+            .get_mut(&path)
+            .ok_or(format!("Path {} not found", path))?;
+        unit.response(slot, reponse.into_result());
+        Ok(())
+    }
+    #[allow(dead_code)]
+    /// This function is used to testing
+    pub fn peek_registers(&self) -> Vec<ArgState> {
+        let rf = &self.register_file;
+        let size = rf.size();
+        (0..size).map(|i| rf.read(i)).collect()
     }
 }

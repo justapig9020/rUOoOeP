@@ -1,27 +1,61 @@
+#![feature(trait_upcasting)]
 mod core;
 mod display;
 mod functional_units;
 mod graph;
+mod util;
 mod virtual_machine;
 use crate::core::processor::Processor;
-use crate::functional_units::factory::{Factory, Function};
+use crate::functional_units::factory::{Factory, Function, MemFunction};
 use std::io;
 
 fn main() -> Result<(), String> {
     let program = vec![
-        "addi R1, R0, #100", // R1 = 100
-        "addi R2, R0, #200", // R2 = 200
-        "add R3, R1, R2",    // R3 = 300
-        "add R4, R1, R3",    // R4 = 400
-        "add R3, R4, R3",    // R3 = 700
-        "addi R1, R5, #400", // R1 = 400
-        "add R5, R1, R2",    // R5 = 600
-        /* R1: 400
-         * R2: 200
-         * R3: 700
-         * R4: 400
-         * R5: 600
-         */
+        "addi R1, R0, #0",
+        "addi R2, R0, #10",
+        "sw R1, R2, #0", // j = 0, &j == 10
+        "sw R1, R2, #4", // k = 0, &k == 14
+        "addi R3, R0, #4",
+        "addi R4, R0, #5",
+        // First iteration
+        "lw R1, R2, #0",
+        "add R1, R3, R1", // j += 4
+        "sw R1, R2, #0",
+        "lw R1, R2, #4",
+        "add R1, R4, R1", // k += 4
+        "sw R1, R2, #4",
+        // Second iteration
+        "lw R1, R2, #0",
+        "add R1, R3, R1", // j += 4
+        "sw R1, R2, #0",
+        "lw R1, R2, #4",
+        "add R1, R4, R1", // k += 4
+        "sw R1, R2, #4",
+        // Third iteration
+        "lw R1, R2, #0",
+        "add R1, R3, R1", // j += 4
+        "sw R1, R2, #0",
+        "lw R1, R2, #4",
+        "add R1, R4, R1", // k += 4
+        "sw R1, R2, #4",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
         "nop",
         "nop",
         "nop",
@@ -44,15 +78,23 @@ fn main() -> Result<(), String> {
         let unit = ff.new_unit(Function::Arthmatic);
         p.add_path(unit)?;
     }
-    let mut vm = virtual_machine::Machine::new(p, program, 0);
+    let unit = ff.new_mem_unit(MemFunction::MemoryAccess);
+    p.add_mem_path(unit)?;
+    let mut vm = virtual_machine::Machine::new(p, program, 20);
 
-    while let Ok(_) = vm.next_cycle() {
+    let mut result = vm.next_cycle();
+    while result.is_ok() {
         println!("{}", vm);
         pause();
+        result = vm.next_cycle();
     }
-    let p = vm.into_processor();
+
+    println!("{:?}", result);
+
+    let (p, dram) = vm.splite();
     println!("Emulation finished");
     println!("{:#?}", p);
+    println!("{:?}", dram);
     Ok(())
 }
 

@@ -20,4 +20,7 @@ impl ResultBus {
     pub fn take(&mut self) -> Option<(RStag, ExecResult)> {
         self.value.take()
     }
+    pub fn is_free(&self) -> bool {
+        self.value.is_none()
+    }
 }

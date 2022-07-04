@@ -7,16 +7,10 @@ pub struct RegisterFile {
     entry: [Entry; 16],
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Entry {
     val: u32,
     tag: Option<RStag>,
-}
-
-impl Default for Entry {
-    fn default() -> Self {
-        Self { val: 0, tag: None }
-    }
 }
 
 #[cfg(test)]
@@ -107,5 +101,9 @@ impl RegisterFile {
             ret.push(content);
         }
         ret
+    }
+    /// Return size of the registerfile, in other words, the register count.
+    pub fn size(&self) -> usize {
+        self.entry.len()
     }
 }
