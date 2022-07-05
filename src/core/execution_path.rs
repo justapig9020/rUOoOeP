@@ -152,8 +152,14 @@ struct BusAccessHandler {
     slot: usize,
 }
 
+impl Display for BusAccessHandler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}", self.path, self.slot)
+    }
+}
+
 impl BusAccessHandler {
-    fn paht_name(&self) -> String {
+    fn path_name(&self) -> String {
         self.path.clone()
     }
 }
@@ -190,6 +196,12 @@ impl BusAccessRequst {
     }
 }
 
+impl Display for BusAccessRequst {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?} from {}", self.access, self.handler)
+    }
+}
+
 #[derive(Debug)]
 pub struct BusAccessResponse {
     result: Result<BusAccessResult, String>,
@@ -198,7 +210,7 @@ pub struct BusAccessResponse {
 
 impl BusAccessResponse {
     pub fn path_name(&self) -> String {
-        self.handler.paht_name()
+        self.handler.path_name()
     }
     pub fn slot(&self) -> usize {
         self.handler.slot

@@ -7,7 +7,7 @@ use super::register::RegisterFile;
 use super::result_bus::ResultBus;
 use crate::display::into_table;
 use std::collections::{HashMap, LinkedList};
-use std::fmt;
+use std::fmt::{self, Display};
 
 enum IssueResult {
     Issued(RStag),
@@ -17,6 +17,17 @@ enum IssueResult {
 #[derive(Debug)]
 struct BusController {
     access_queue: LinkedList<BusAccessRequst>,
+}
+
+impl Display for BusController {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let queue: Vec<String> = self
+            .access_queue
+            .iter()
+            .map(|req| format!("{}", req))
+            .collect();
+        write!(f, "{}", into_table("Bus Access Queue", queue))
+    }
 }
 
 impl BusController {
@@ -58,7 +69,7 @@ impl fmt::Display for Processor {
         for (_, p) in self.access_paths.iter() {
             writeln!(f, "{}", p)?;
         }
-        writeln!(f, "{:?}", self.bus_controller)?;
+        writeln!(f, "{}", self.bus_controller)?;
         writeln!(f, "{}", self.result_bus)
     }
 }

@@ -283,7 +283,11 @@ struct AccessInst {
 
 impl Display for AccessInst {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}; {}; {:?}", self.name(), self.args, self.dependencies)
+        write!(f, "{}; {}; [", self.name(), self.args)?;
+        for dep in self.dependencies.iter() {
+            write!(f, "{}, ", dep)?;
+        }
+        write!(f, "]")
     }
 }
 
