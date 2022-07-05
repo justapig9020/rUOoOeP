@@ -55,7 +55,7 @@ impl fmt::Display for Processor {
         for (_, p) in self.access_paths.iter() {
             writeln!(f, "{}", p)?;
         }
-        writeln!(f, "{:?}", self.result_bus)
+        writeln!(f, "{}", self.result_bus)
     }
 }
 
