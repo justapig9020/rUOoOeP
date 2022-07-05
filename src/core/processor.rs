@@ -6,7 +6,7 @@ use super::nop_unit;
 use super::register::RegisterFile;
 use super::result_bus::ResultBus;
 use crate::display::into_table;
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList};
 use std::fmt;
 
 enum IssueResult {
@@ -16,17 +16,17 @@ enum IssueResult {
 
 #[derive(Debug)]
 struct BusController {
-    access_queue: Vec<BusAccessRequst>,
+    access_queue: LinkedList<BusAccessRequst>,
 }
 
 impl BusController {
     fn new() -> Self {
         Self {
-            access_queue: Vec::new(),
+            access_queue: LinkedList::new(),
         }
     }
     fn push(&mut self, request: BusAccessRequst) {
-        self.access_queue.push(request);
+        self.access_queue.push_back(request);
     }
 }
 #[derive(Debug)]
@@ -58,6 +58,7 @@ impl fmt::Display for Processor {
         for (_, p) in self.access_paths.iter() {
             writeln!(f, "{}", p)?;
         }
+        writeln!(f, "{:?}", self.bus_controller)?;
         writeln!(f, "{}", self.result_bus)
     }
 }
@@ -224,18 +225,18 @@ impl Processor {
     }
     pub fn bus_access(&mut self) -> Option<BusAccessRequst> {
         let controller = &mut self.bus_controller;
-        let request = controller.access_queue.pop()?;
+        let request = controller.access_queue.pop_front()?;
         Some(request)
     }
-    pub fn resolve_access(&mut self, reponse: BusAccessResponse) -> Result<(), String> {
-        let path = reponse.path_name();
-        let slot = reponse.slot();
+    pub fn resolve_access(&mut self, response: BusAccessResponse) -> Result<(), String> {
+        let path = response.path_name();
+        let slot = response.slot();
 
         let unit = self
             .access_paths
             .get_mut(&path)
             .ok_or(format!("Path {} not found", path))?;
-        unit.response(slot, reponse.into_result());
+        unit.response(slot, response.into_result());
         Ok(())
     }
     #[allow(dead_code)]
