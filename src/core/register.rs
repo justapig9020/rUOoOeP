@@ -102,9 +102,6 @@ impl RegisterFile {
     pub fn size(&self) -> usize {
         self.entry.len()
     }
-    fn test(&self) {
-        let iter = self.entry.iter();
-    }
 }
 
 impl<'b> IntoIterator for &'b RegisterFile {
