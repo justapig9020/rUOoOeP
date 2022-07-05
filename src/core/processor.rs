@@ -227,15 +227,15 @@ impl Processor {
         let request = controller.access_queue.pop()?;
         Some(request)
     }
-    pub fn resolve_access(&mut self, reponse: BusAccessResponse) -> Result<(), String> {
-        let path = reponse.path_name();
-        let slot = reponse.slot();
+    pub fn resolve_access(&mut self, response: BusAccessResponse) -> Result<(), String> {
+        let path = response.path_name();
+        let slot = response.slot();
 
         let unit = self
             .access_paths
             .get_mut(&path)
             .ok_or(format!("Path {} not found", path))?;
-        unit.response(slot, reponse.into_result());
+        unit.response(slot, response.into_result());
         Ok(())
     }
     #[allow(dead_code)]

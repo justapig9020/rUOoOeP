@@ -3,6 +3,7 @@ mod core;
 mod display;
 mod functional_units;
 mod graph;
+mod memory_bus;
 mod util;
 mod virtual_machine;
 use crate::core::processor::Processor;
