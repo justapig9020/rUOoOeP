@@ -157,8 +157,8 @@ impl ReservationStation {
     /// Find a ready instruction.
     /// If found, its index returned.
     /// Otherwise, return None.
-    pub fn ready(&mut self) -> Option<usize> {
-        for (idx, slot) in self.slots.iter_mut().enumerate() {
+    pub fn ready(&self) -> Option<usize> {
+        for (idx, slot) in self.slots.iter().enumerate() {
             if let SlotState::Pending(inst) = slot {
                 if inst.is_ready() {
                     return Some(idx);

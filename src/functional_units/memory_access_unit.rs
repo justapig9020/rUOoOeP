@@ -632,14 +632,26 @@ impl Display for Unit {
 impl AccessPath for Unit {
     fn request(&mut self) -> Option<BusAccessRequst> {
         let path = self.name();
-        let store_pending = self.store_station.pending();
-        let load_pending = self.load_station.pending();
 
-        let (station, access_type) = if store_pending < load_pending {
-            (&mut self.load_station, AccessType::Load)
-        } else {
-            (&mut self.store_station, AccessType::Store)
-        };
+        let stations = vec![
+            (&mut self.load_station, AccessType::Load),
+            (&mut self.store_station, AccessType::Store),
+        ];
+
+        // Filter out stations that has no ready slot
+        let mut stations: Vec<(&mut ReservationStation, AccessType)> = stations
+            .into_iter()
+            .filter(|(s, _)| s.ready().is_some())
+            .collect();
+
+        /*
+         * Sort stations by their pending count decreasingly.
+         * Therefor, the station with
+         */
+        stations.sort_by_key(|(s, _)| s.pending());
+        stations.reverse();
+
+        let (station, access_type) = stations.pop()?;
 
         let slot_id = station.ready()?;
         let logical_id = Unit::physical_slot_id_to_logical(slot_id, access_type);
