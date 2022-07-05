@@ -324,6 +324,16 @@ impl RenamedInst for AccessInst {
     }
     fn forwarding(&mut self, tag: &RStag, val: u32) {
         self.args.forwarding(tag, val);
+        let mut sloved: Vec<usize> = self
+            .dependencies
+            .iter()
+            .enumerate()
+            .filter(|(_, dep)| **dep == *tag)
+            .map(|(idx, _)| idx)
+            .collect();
+        if let Some(idx) = sloved.pop() {
+            self.dependencies.remove(idx);
+        }
     }
     fn is_ready(&self) -> bool {
         if !self.dependency_free() {

@@ -23,22 +23,40 @@ fn main() -> Result<(), String> {
         "add R1, R3, R1", // j += 4
         "sw R1, R2, #0",
         "lw R1, R2, #4",
-        "add R1, R4, R1", // k += 4
+        "add R1, R4, R1", // k += 5
         "sw R1, R2, #4",
         // Second iteration
         "lw R1, R2, #0",
         "add R1, R3, R1", // j += 4
         "sw R1, R2, #0",
         "lw R1, R2, #4",
-        "add R1, R4, R1", // k += 4
+        "add R1, R4, R1", // k += 5
         "sw R1, R2, #4",
         // Third iteration
         "lw R1, R2, #0",
         "add R1, R3, R1", // j += 4
         "sw R1, R2, #0",
         "lw R1, R2, #4",
-        "add R1, R4, R1", // k += 4
+        "add R1, R4, R1", // k += 5
         "sw R1, R2, #4",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
+        "nop",
         "nop",
         "nop",
         "nop",

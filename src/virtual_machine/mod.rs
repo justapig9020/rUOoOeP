@@ -37,7 +37,7 @@ impl Machine {
             }
         }
         if let Some(response) = self.dram.next_cycle() {
-            self.core.resolve_access(response)?;
+            p.resolve_access(response)?;
         }
         Ok(())
     }
@@ -150,6 +150,35 @@ mod vm {
             "lw R1, R2, #4",
             "add R1, R4, R1", // k += 5
             "sw R1, R2, #4",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
+            "nop",
             "nop",
             "nop",
             "nop",
