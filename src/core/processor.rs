@@ -43,9 +43,12 @@ pub struct Processor {
 impl fmt::Display for Processor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut registers = vec![format!("PC: {}", self.pc)];
-        self.register_file.into_iter().for_each(|reg| {
-            registers.push(format!("{}", reg));
-        });
+        self.register_file
+            .into_iter()
+            .enumerate()
+            .for_each(|(idx, reg)| {
+                registers.push(format!("R{idx}: {reg}"));
+            });
         let last_instruction = self.decoder.last_instruction().to_string();
         writeln!(f, "{}", into_table("Instruction", vec![last_instruction]))?;
         writeln!(f, "{}", into_table("Registers", registers))?;
