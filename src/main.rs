@@ -39,54 +39,6 @@ fn main() -> Result<(), String> {
         "lw R1, R2, #4",
         "add R1, R4, R1", // k += 5
         "sw R1, R2, #4",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
-        "nop",
     ];
 
     let program = program.iter().map(|i| i.to_string()).collect();
@@ -101,11 +53,18 @@ fn main() -> Result<(), String> {
     p.add_mem_path(unit)?;
     let mut vm = virtual_machine::Machine::new(p, program, 20);
 
-    let mut result = vm.next_cycle();
+    let mut result = Ok(());
     while result.is_ok() {
         println!("{}", vm);
         pause();
         result = vm.next_cycle();
+    }
+
+    result = Ok(());
+    while result.is_ok() {
+        println!("{}", vm);
+        pause();
+        result = vm.next_flush_cycle();
     }
 
     println!("{:?}", result);

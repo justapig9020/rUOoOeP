@@ -618,7 +618,13 @@ impl ExecPath for Unit {
         Ok(())
     }
     fn pending(&self) -> usize {
-        self.evaluation_queue.len()
+        self.load_station.pending() + self.store_station.pending()
+    }
+    fn is_idle(&self) -> bool {
+        let evaluating = !self.evaluation_queue.is_empty();
+        let loading = self.load_station.occupied() != 0;
+        let storing = self.store_station.occupied() != 0;
+        !(evaluating || loading || storing)
     }
 }
 

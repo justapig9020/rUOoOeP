@@ -38,9 +38,11 @@ impl ExecPath for Unit {
     fn next_cycle(&mut self, _bus: &mut ResultBus) -> Result<(), String> {
         Ok(())
     }
-    /// Return pending instruction count
     fn pending(&self) -> usize {
-        1
+        0
+    }
+    fn is_idle(&self) -> bool {
+        true
     }
 }
 

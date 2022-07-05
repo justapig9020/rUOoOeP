@@ -125,6 +125,8 @@ pub trait ExecPath: Debug + Display {
     fn next_cycle(&mut self, bus: &mut ResultBus) -> Result<(), String>;
     /// Return pending instruction count
     fn pending(&self) -> usize;
+    /// Return weither the execution path is idle or not
+    fn is_idle(&self) -> bool;
 }
 
 /// Bus access command

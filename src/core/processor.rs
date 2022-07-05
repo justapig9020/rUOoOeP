@@ -223,6 +223,25 @@ impl Processor {
         self.pc = next_pc;
         Ok(())
     }
+    /// Return the state of the processor.
+    /// If there is instruction executing, return false.
+    /// Otherwise, return true.
+    pub fn is_idle(&self) -> bool {
+        let executing_arth = self
+            .arthmatic_paths
+            .iter()
+            .filter(|(_, p)| !p.is_idle())
+            .count();
+        let executing_mem = self
+            .access_paths
+            .iter()
+            .filter(|(_, p)| !p.is_idle())
+            .count();
+        let no_instruction_executing = executing_arth + executing_mem == 0;
+        let no_writeback = self.result_bus.is_free();
+        println!("{no_instruction_executing} {no_writeback}");
+        no_instruction_executing && no_writeback
+    }
     pub fn bus_access(&mut self) -> Option<BusAccessRequst> {
         let controller = &mut self.bus_controller;
         let request = controller.access_queue.pop_front()?;

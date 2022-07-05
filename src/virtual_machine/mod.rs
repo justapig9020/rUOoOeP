@@ -24,12 +24,16 @@ impl Machine {
     }
     /// Execute next machine cycle of virtual machine
     pub fn next_cycle(&mut self) -> Result<(), String> {
-        let p = &mut self.core;
-        let line = p.fetch_address();
+        let line = self.core.fetch_address();
         let inst = self
             .iram
             .get(line)
             .ok_or(format!("Inst addr: {} out of bound", line))?;
+        let inst = inst.clone();
+        self.do_next_cycle(&inst)
+    }
+    fn do_next_cycle(&mut self, inst: &str) -> Result<(), String> {
+        let p = &mut self.core;
         p.next_cycle(inst)?;
         if self.dram.is_idle() {
             if let Some(request) = p.bus_access() {
@@ -40,6 +44,13 @@ impl Machine {
             p.resolve_access(response)?;
         }
         Ok(())
+    }
+    pub fn next_flush_cycle(&mut self) -> Result<(), String> {
+        if self.core.is_idle() {
+            let msg = String::from("This machine is idle");
+            return Err(msg);
+        }
+        self.do_next_cycle("nop")
     }
     /// Splite virtual machine into components
     pub fn splite(self) -> (Processor, Vec<u8>) {
@@ -57,6 +68,9 @@ mod vm {
 
     use super::*;
 
+    fn flush(vm: &mut Machine) {
+        while vm.next_flush_cycle().is_ok() {}
+    }
     #[test]
     fn sequential_execution() -> Result<(), String> {
         let program = vec![
@@ -67,24 +81,12 @@ mod vm {
             "add R3, R4, R3",    // R3 = 700
             "addi R1, R5, #400", // R1 = 400
             "add R5, R1, R2",    // R5 = 600
-            /* R1: 400
-             * R2: 200
-             * R3: 700
-             * R4: 400
-             * R5: 600
-             */
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
+                                 /* R1: 400
+                                  * R2: 200
+                                  * R3: 700
+                                  * R4: 400
+                                  * R5: 600
+                                  */
         ];
         let reg_expect = vec![0, 400, 200, 700, 400, 600, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         let reg_expect: Vec<ArgState> = reg_expect.iter().map(|v| ArgState::Ready(*v)).collect();
@@ -100,6 +102,7 @@ mod vm {
         let mut vm = Machine::new(p, program, 0);
 
         while vm.next_cycle().is_ok() {}
+        flush(&mut vm);
         let (p, _) = vm.splite();
         let result = p.peek_registers();
         for (r, e) in result.iter().zip(reg_expect.iter()) {
@@ -150,65 +153,6 @@ mod vm {
             "lw R1, R2, #4",
             "add R1, R4, R1", // k += 5
             "sw R1, R2, #4",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
-            "nop",
         ];
         let program = program.iter().map(|i| i.to_string()).collect();
 
@@ -225,6 +169,7 @@ mod vm {
 
         let mut vm = Machine::new(p, program, 200);
         while vm.next_cycle().is_ok() {}
+        flush(&mut vm);
 
         let (_processor, dram) = vm.splite();
 

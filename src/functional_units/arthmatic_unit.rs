@@ -66,7 +66,10 @@ impl ExecPath for Unit {
         Ok(())
     }
     fn pending(&self) -> usize {
-        self.station.occupied()
+        self.station.pending()
+    }
+    fn is_idle(&self) -> bool {
+        self.station.occupied() == 0
     }
 }
 
