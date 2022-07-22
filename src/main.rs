@@ -46,7 +46,7 @@ fn main() -> Result<(), String> {
     let mut p = Processor::new();
     let mut ff = Factory::new();
     for _ in 0..2 {
-        let unit = ff.new_unit(Function::Arthmatic);
+        let unit = ff.new_unit(Function::Arithmetic);
         p.add_path(unit)?;
     }
     let unit = ff.new_mem_unit(MemFunction::MemoryAccess);

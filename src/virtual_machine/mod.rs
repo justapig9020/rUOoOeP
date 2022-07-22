@@ -96,7 +96,7 @@ mod vm {
         let mut p = Processor::new();
         let mut ff = Factory::new();
         for _ in 0..2 {
-            let unit = ff.new_unit(Function::Arthmatic);
+            let unit = ff.new_unit(Function::Arithmetic);
             p.add_path(unit)?;
         }
         let mut vm = Machine::new(p, program, 0);
@@ -160,7 +160,7 @@ mod vm {
 
         let mut ff = Factory::new();
         for _ in 0..2 {
-            let unit = ff.new_unit(Function::Arthmatic);
+            let unit = ff.new_unit(Function::Arithmetic);
             p.add_path(unit)?;
         }
 

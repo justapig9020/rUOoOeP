@@ -1,4 +1,4 @@
-use super::arthmatic_unit;
+use super::arithmetic_unit;
 use crate::core::execution_path::AccessPath;
 use crate::core::execution_path::ExecPath;
 use crate::functional_units::memory_access_unit;
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 #[derive(Hash, std::cmp::PartialEq, std::cmp::Eq, Clone, Copy)]
 pub enum Function {
-    Arthmatic,
+    Arithmetic,
 }
 
 #[derive(Hash, std::cmp::PartialEq, std::cmp::Eq, Clone, Copy)]
@@ -38,7 +38,7 @@ impl Factory {
             0
         };
         match func {
-            Arthmatic => Box::new(arthmatic_unit::Unit::new(index)),
+            Arithmetic => Box::new(arithmetic_unit::Unit::new(index)),
         }
     }
     pub fn new_mem_unit(&mut self, func: MemFunction) -> Box<dyn AccessPath> {
@@ -59,7 +59,8 @@ impl Factory {
 #[test]
 fn factory_new_units() {
     let mut ff = Factory::new();
-    let units: Vec<Box<dyn ExecPath>> = (0..10).map(|_| ff.new_unit(Function::Arthmatic)).collect();
+    let units: Vec<Box<dyn ExecPath>> =
+        (0..10).map(|_| ff.new_unit(Function::Arithmetic)).collect();
     for (i, u) in units.iter().enumerate() {
         let expect = format!("{}{}", u.function(), i);
         assert_eq!(expect, u.name());

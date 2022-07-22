@@ -91,7 +91,7 @@ impl RStag {
 
 #[derive(Debug)]
 pub enum ExecResult {
-    Arth(u32),
+    Arith(u32),
     MemLoad(Vec<u8>),
     MemStore,
     Err(String),
@@ -100,7 +100,7 @@ pub enum ExecResult {
 impl ExecResult {
     pub fn val(&self) -> u32 {
         match self {
-            ExecResult::Arth(val) => *val,
+            ExecResult::Arith(val) => *val,
             ExecResult::MemLoad(val) => raw_to_u32_big_endian(val),
             ExecResult::MemStore => 0,
             // TODO: Improve error handling

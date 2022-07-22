@@ -44,7 +44,7 @@ impl BusController {
 pub struct Processor {
     pc: usize,
     decoder: Decoder,
-    arthmatic_paths: HashMap<String, Box<dyn ExecPath>>,
+    arithmetic_paths: HashMap<String, Box<dyn ExecPath>>,
     access_paths: HashMap<String, Box<dyn AccessPath>>,
     bus_controller: BusController,
     register_file: RegisterFile,
@@ -63,7 +63,7 @@ impl fmt::Display for Processor {
         let last_instruction = self.decoder.last_instruction().to_string();
         writeln!(f, "{}", into_table("Instruction", vec![last_instruction]))?;
         writeln!(f, "{}", into_table("Registers", registers))?;
-        for (_, p) in self.arthmatic_paths.iter() {
+        for (_, p) in self.arithmetic_paths.iter() {
             writeln!(f, "{}", p)?;
         }
         for (_, p) in self.access_paths.iter() {
@@ -79,7 +79,7 @@ impl Processor {
         let mut ret = Self {
             pc: 0,
             decoder: Decoder::new(),
-            arthmatic_paths: HashMap::new(),
+            arithmetic_paths: HashMap::new(),
             access_paths: HashMap::new(),
             bus_controller: BusController::new(),
             register_file: RegisterFile::new(),
@@ -95,7 +95,7 @@ impl Processor {
         let insts = func.list_insts();
         let name = func.name();
 
-        if let Some(prev) = self.arthmatic_paths.insert(name.clone(), func) {
+        if let Some(prev) = self.arithmetic_paths.insert(name.clone(), func) {
             let msg = format!("Already has a execution path with name {}", prev.name());
             Err(msg)
         } else {
@@ -123,7 +123,7 @@ impl Processor {
     fn commit(&mut self) -> bool {
         let result = self.result_bus.take();
         let forward = |(tag, val): (RStag, u32)| -> Option<(RStag, u32)> {
-            for (_, station) in self.arthmatic_paths.iter_mut() {
+            for (_, station) in self.arithmetic_paths.iter_mut() {
                 station.forward(tag.clone(), val);
             }
             for (_, station) in self.access_paths.iter_mut() {
@@ -148,9 +148,9 @@ impl Processor {
         let mut stations = name_of_stations
             .iter()
             .map(|name| {
-                let arth = self.arthmatic_paths.get(name);
+                let arith = self.arithmetic_paths.get(name);
                 let access = self.access_paths.get(name);
-                let station = if let Some(s) = arth {
+                let station = if let Some(s) = arith {
                     &**s
                 } else if let Some(s) = access {
                     &**s as &dyn ExecPath
@@ -163,7 +163,7 @@ impl Processor {
         stations.sort_by_key(|(_, p)| *p);
 
         for (name, _) in stations.iter() {
-            let station = self.arthmatic_paths.get_mut(*name);
+            let station = self.arithmetic_paths.get_mut(*name);
             if let Some(station) = station {
                 let slot_tag = station.try_issue(inst.name(), renamed_args);
                 if let Ok(tag) = slot_tag {
@@ -220,7 +220,7 @@ impl Processor {
             self.register_renaming(tag, inst)?;
         }
 
-        for (_, unit) in self.arthmatic_paths.iter_mut() {
+        for (_, unit) in self.arithmetic_paths.iter_mut() {
             unit.next_cycle(&mut self.result_bus)?;
         }
 
@@ -238,8 +238,8 @@ impl Processor {
     /// If there is instruction executing, return false.
     /// Otherwise, return true.
     pub fn is_idle(&self) -> bool {
-        let executing_arth = self
-            .arthmatic_paths
+        let executing_arith = self
+            .arithmetic_paths
             .iter()
             .filter(|(_, p)| !p.is_idle())
             .count();
@@ -248,7 +248,7 @@ impl Processor {
             .iter()
             .filter(|(_, p)| !p.is_idle())
             .count();
-        let no_instruction_executing = executing_arth + executing_mem == 0;
+        let no_instruction_executing = executing_arith + executing_mem == 0;
         let no_writeback = self.result_bus.is_free();
         println!("{no_instruction_executing} {no_writeback}");
         no_instruction_executing && no_writeback

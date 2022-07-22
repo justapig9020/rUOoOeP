@@ -19,7 +19,7 @@ impl ExecPath for Unit {
         self.name.clone()
     }
     fn function(&self) -> String {
-        String::from("arth")
+        String::from("arith")
     }
     fn list_insts(&self) -> Vec<InstFormat> {
         vec![
@@ -44,7 +44,7 @@ impl ExecPath for Unit {
         self.station.forwarding(&tag, val);
     }
     fn try_issue(&mut self, inst: String, renamed_args: &[ArgState]) -> Result<RStag, ()> {
-        let inst = ArthInst::new(inst, renamed_args).map_err(|_| ())?;
+        let inst = ArithInst::new(inst, renamed_args).map_err(|_| ())?;
         self.station
             .insert(inst as Box<dyn RenamedInst>)
             .map(|idx| RStag::new(&self.name, idx))
@@ -95,7 +95,7 @@ impl Display for Unit {
 impl Unit {
     pub fn new(index: usize) -> Self {
         Self {
-            name: format!("arth{}", index),
+            name: format!("arith{}", index),
             station: ReservationStation::new(5),
             exec: None,
         }
@@ -131,19 +131,19 @@ impl Unit {
 }
 
 #[derive(Debug, Clone)]
-struct ArthInst {
+struct ArithInst {
     name: String,
     arg0: ArgState,
     arg1: ArgState,
 }
 
-impl Display for ArthInst {
+impl Display for ArithInst {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}, {}", self.name, self.arg0, self.arg1)
     }
 }
 
-impl ArthInst {
+impl ArithInst {
     fn new(name: String, renamed_args: &[ArgState]) -> Result<Box<Self>, String> {
         if renamed_args.len() != 2 {
             Err(format!("Expect 2 arguments, {} got", renamed_args.len()))
@@ -157,7 +157,7 @@ impl ArthInst {
     }
 }
 
-impl RenamedInst for ArthInst {
+impl RenamedInst for ArithInst {
     fn name(&self) -> &str {
         &self.name
     }
@@ -208,7 +208,7 @@ impl ExecUnit {
     fn next_cycle(&mut self, bus: &mut ResultBus) -> bool {
         if self.cycle == 0 {
             let tag = self.tag.clone();
-            let result = ExecResult::Arth(self.result);
+            let result = ExecResult::Arith(self.result);
             bus.set(tag, result)
         } else {
             self.cycle -= 1;
