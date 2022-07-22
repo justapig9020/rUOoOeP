@@ -19,6 +19,7 @@ use super::reservation_station::{RenamedInst, ReservationStation};
 const FUNCTION_NAME: &str = "mem_access";
 const LOAD_STATION_SIZE: usize = 4;
 const STORE_STATION_SIZE: usize = 4;
+const EVALUATION_LATENCY: usize = 1;
 const PENDING_CAPACITY: usize = LOAD_STATION_SIZE + STORE_STATION_SIZE;
 
 /// Used to indicate type of access request
@@ -273,11 +274,16 @@ impl AccessArgs {
     }
 }
 
-// TODO: update comment
+/// Instruction of memory access
 #[derive(Debug)]
 struct AccessInst {
+    /// Name of the instruction
     name: String,
+    /// Arguments
     args: AccessArgs,
+    /// Dependencies of the access
+    /// For instance: there is an instruction which is accessing the same acccess as the current instruction
+    /// To make sure this memory access will followed by the maintioned one, add it to the dependency of this instruction
     dependencies: Vec<RStag>,
 }
 
@@ -292,6 +298,7 @@ impl Display for AccessInst {
 }
 
 impl AccessInst {
+    /// Construct a new AccessInst by name and arguments
     fn new(name: String, renamed_args: &[ArgState]) -> Self {
         let (access_type, _) = AccessType::parse(&name);
         let args = AccessArgs::new(access_type, renamed_args);
@@ -301,20 +308,30 @@ impl AccessInst {
             dependencies: vec![],
         }
     }
+    // TODO: update comment
+    /// Get access type of the instruction
     fn access_type(&self) -> AccessType {
         match self.args {
             AccessArgs::Load(_) => AccessType::Load,
             AccessArgs::Store(_, _) => AccessType::Store,
         }
     }
+    /// Check wheither the instruction is free from dependencies or not
+    /// If there finds no dependency, return true
+    /// Otherwise, return false
     fn dependency_free(&self) -> bool {
         self.dependencies.is_empty()
     }
+    /// Evaluate the instruction, update both base address of access and dependiencies
+    /// The term evaluation here means the routine to calculate the address to access
     fn evaluated(&mut self, base: u32, dependiencies: Vec<RStag>) {
         self.dependencies = dependiencies;
         self.args.update_base_address(base);
     }
-    fn read_for_evaluation(&self) -> Option<(u32, u32)> {
+    /// Check wheither the instruction holds all informations for evaluation or not
+    /// If it's ready the tuple (base address, access length) returned
+    /// Otherwise, None returned
+    fn ready_for_evaluation(&self) -> Option<(u32, u32)> {
         self.args.ready_for_evaluation()
     }
 }
@@ -394,17 +411,23 @@ mod access_instruction {
 
 #[derive(Debug)]
 struct EvaluationUnit {
+    // Remaining clock cycle to evaluated
     remain_cycle: usize,
+    // Result of evaluation
     result: u32,
 }
 
 impl EvaluationUnit {
+    /// Starting execute another evaluation
     fn exec(_inst: String, base: u32, offset: u32) -> Self {
         Self {
-            remain_cycle: 1,
+            remain_cycle: EVALUATION_LATENCY,
             result: base + offset,
         }
     }
+    /// Execute next clock cycle for evaluation unit
+    /// If the value has been evaluated, return the result
+    /// Otherwise, return None
     fn next_cycle(&mut self) -> Option<u32> {
         if self.remain_cycle == 0 {
             Some(self.result)
@@ -608,7 +631,7 @@ impl ExecPath for Unit {
                 self.evaluating = None;
             }
         } else if let Some((_, to_evaluate)) = self.evaluation_queue.head() {
-            if let Some((base, offset)) = to_evaluate.read_for_evaluation() {
+            if let Some((base, offset)) = to_evaluate.ready_for_evaluation() {
                 let evaluation = EvaluationUnit::exec(to_evaluate.name().to_string(), base, offset);
                 self.evaluating = Some(evaluation);
             }
