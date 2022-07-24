@@ -49,8 +49,6 @@ fn main() -> Result<(), String> {
         let unit = ff.new_unit(Function::Arithmetic);
         p.add_path(unit)?;
     }
-    let unit = ff.new_mem_unit(MemFunction::MemoryAccess);
-    p.add_mem_path(unit)?;
     let mut vm = virtual_machine::Machine::new(p, program, 20);
 
     let mut result = Ok(());

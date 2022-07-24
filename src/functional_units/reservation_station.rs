@@ -29,12 +29,12 @@ impl SlotState {
 }
 
 pub trait RenamedInst: Display + Debug {
-    /// Return a copy of instruction name
-    fn name(&self) -> &str;
+    /// Return command of the instruction
+    fn command(&self) -> &str;
     fn arguments(&self) -> Vec<ArgState>;
     /// An instruction is ready if it's not waiting result of another instruction.
     fn is_ready(&self) -> bool;
-    fn forwarding(&mut self, tag: &RStag, val: u32);
+    fn forward(&mut self, tag: &RStag, val: u32);
 }
 
 #[derive(Debug)]
@@ -66,7 +66,7 @@ mod resrvation_station {
         }
     }
     impl RenamedInst for InstStub {
-        fn name(&self) -> &str {
+        fn command(&self) -> &str {
             "inst"
         }
         fn arguments(&self) -> Vec<ArgState> {
@@ -75,7 +75,7 @@ mod resrvation_station {
         fn is_ready(&self) -> bool {
             true
         }
-        fn forwarding(&mut self, _tag: &RStag, _val: u32) {}
+        fn forward(&mut self, _tag: &RStag, _val: u32) {}
     }
     fn new_inst() -> Box<dyn RenamedInst> {
         Box::new(InstStub {})
@@ -173,10 +173,10 @@ impl ReservationStation {
             *slot = SlotState::Empty;
         }
     }
-    pub fn forwarding(&mut self, tag: &RStag, val: u32) {
+    pub fn forward(&mut self, tag: &RStag, val: u32) {
         for slot in self.slots.iter_mut() {
             if let SlotState::Pending(slot) = slot {
-                slot.forwarding(tag, val);
+                slot.forward(tag, val);
             }
         }
     }

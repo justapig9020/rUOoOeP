@@ -379,7 +379,6 @@ impl TokenType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct InstFormat {
     name: String,
-    /// Indicate the syntax of arguments, the order is matter.
     syntax: Vec<TokenType>,
 }
 

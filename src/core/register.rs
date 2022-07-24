@@ -4,7 +4,7 @@ use std::{default::Default, fmt::Display};
 #[derive(Default, Debug)]
 /// Renamable register file
 pub struct RegisterFile {
-    entry: [Entry; 16],
+    entries: [Entry; 16],
 }
 
 #[derive(Debug, Default)]
@@ -31,7 +31,7 @@ mod regfile {
     fn new() {
         let default_val = 0;
         let rf = RegisterFile::new();
-        for e in rf.entry.iter() {
+        for e in rf.entries.iter() {
             assert_eq!(default_val, e.val);
             assert!(e.tag.is_none());
         }
@@ -43,13 +43,13 @@ mod regfile {
         let write_val = 100;
         let to_write = [0, 10, 15];
         for idx in to_write.iter() {
-            rf.entry[*idx].tag = Some(tag.clone());
+            rf.entries[*idx].tag = Some(tag.clone());
         }
 
         rf.write(tag, write_val);
 
         for idx in to_write.iter() {
-            let entry_ut = &rf.entry[*idx];
+            let entry_ut = &rf.entries[*idx];
             assert_eq!(write_val, entry_ut.val);
             assert!(entry_ut.tag.is_none());
         }
@@ -61,11 +61,11 @@ mod regfile {
         let tag_write = RStag::new("name", 2);
         let to_not_match = 5;
         let write_val = 100;
-        rf.entry[to_not_match].tag = Some(tag_set);
+        rf.entries[to_not_match].tag = Some(tag_set);
 
         rf.write(tag_write, write_val);
 
-        let entry_not_matched = &rf.entry[to_not_match];
+        let entry_not_matched = &rf.entries[to_not_match];
         assert_eq!(0, entry_not_matched.val);
         assert!(entry_not_matched.tag.is_some());
     }
@@ -75,8 +75,9 @@ impl RegisterFile {
     pub fn new() -> Self {
         Default::default()
     }
+    /// Read data from register `idx`
     pub fn read(&self, idx: usize) -> ArgState {
-        let entry = &self.entry[idx];
+        let entry = &self.entries[idx];
         if let Some(tag) = entry.tag.as_ref() {
             ArgState::Waiting(tag.clone())
         } else {
@@ -84,8 +85,9 @@ impl RegisterFile {
             ArgState::Ready(val)
         }
     }
+    /// Write the given `val` to renamed register `tag`
     pub fn write(&mut self, tag: RStag, val: u32) {
-        for e in self.entry.as_mut() {
+        for e in self.entries.as_mut() {
             if let Some(wait) = e.tag.as_ref() {
                 if *wait == tag {
                     e.val = val;
@@ -96,11 +98,11 @@ impl RegisterFile {
     }
     /// Rename register number `idx` with reservation station tag
     pub fn rename(&mut self, idx: usize, tag: RStag) {
-        self.entry[idx].tag = Some(tag);
+        self.entries[idx].tag = Some(tag);
     }
     /// Return size of the registerfile, in other words, the register count.
     pub fn size(&self) -> usize {
-        self.entry.len()
+        self.entries.len()
     }
 }
 
@@ -108,6 +110,6 @@ impl<'b> IntoIterator for &'b RegisterFile {
     type IntoIter = std::slice::Iter<'b, Entry>;
     type Item = &'b Entry;
     fn into_iter(self) -> Self::IntoIter {
-        self.entry.iter()
+        self.entries.iter()
     }
 }

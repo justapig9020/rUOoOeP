@@ -289,7 +289,7 @@ struct AccessInst {
 
 impl Display for AccessInst {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}; {}; [", self.name(), self.args)?;
+        write!(f, "{}; {}; [", self.command(), self.args)?;
         for dep in self.dependencies.iter() {
             write!(f, "{}, ", dep)?;
         }
@@ -337,13 +337,13 @@ impl AccessInst {
 }
 
 impl RenamedInst for AccessInst {
-    fn name(&self) -> &str {
+    fn command(&self) -> &str {
         &self.name
     }
     fn arguments(&self) -> Vec<ArgState> {
         self.args.arguments()
     }
-    fn forwarding(&mut self, tag: &RStag, val: u32) {
+    fn forward(&mut self, tag: &RStag, val: u32) {
         self.args.forwarding(tag, val);
         let mut sloved: Vec<usize> = self
             .dependencies
@@ -381,7 +381,7 @@ mod access_instruction {
 
         assert_eq!(false, inst.is_ready());
 
-        inst.forwarding(&base, 10);
+        inst.forward(&base, 10);
 
         assert_eq!(true, inst.is_ready());
     }
@@ -399,11 +399,11 @@ mod access_instruction {
 
         assert_eq!(false, inst.is_ready());
 
-        inst.forwarding(&base, 10);
+        inst.forward(&base, 10);
 
         assert_eq!(false, inst.is_ready());
 
-        inst.forwarding(&source, 10);
+        inst.forward(&source, 10);
 
         assert_eq!(true, inst.is_ready());
     }
@@ -481,7 +481,7 @@ impl Unit {
     }
     fn evaluating_queue_forward(&mut self, tag: &RStag, val: u32) {
         for (_, slot) in &mut self.evaluation_queue {
-            slot.forwarding(tag, val);
+            slot.forward(tag, val);
         }
     }
     /// Check and list pending accesses which with access range overlaping with the given range
@@ -517,7 +517,7 @@ impl Unit {
                 let args = inst.arguments();
                 let base = args.last().expect("Base address not found");
                 if let ArgState::Ready(base) = base {
-                    let previous = get_access_range(inst.name(), *base);
+                    let previous = get_access_range(inst.command(), *base);
                     let log_id = Unit::physical_slot_id_to_logical(phy_id, access_type);
                     if access_overlap(&previous, target) {
                         dependencies.push(RStag::new(&self.name, log_id));
@@ -539,7 +539,7 @@ impl Unit {
             .pop()
             .ok_or_else(||String::from("Expect instruction in evaluating queue while issuing instruction to reservation station"))?;
 
-        let (access_type, len) = AccessType::parse(issuing.name());
+        let (access_type, len) = AccessType::parse(issuing.command());
         let access_range = evaluated_base..evaluated_base + len as u32;
         let dependiencies = self.dependency_check(access_type, access_range);
 
@@ -592,8 +592,8 @@ impl ExecPath for Unit {
         }
 
         self.evaluating_queue_forward(&tag, val);
-        self.load_station.forwarding(&tag, val);
-        self.store_station.forwarding(&tag, val)
+        self.load_station.forward(&tag, val);
+        self.store_station.forward(&tag, val)
     }
     fn try_issue(&mut self, inst: String, vals: &[ArgState]) -> Result<RStag, ()> {
         if self.evaluation_queue.is_full() {
@@ -632,7 +632,8 @@ impl ExecPath for Unit {
             }
         } else if let Some((_, to_evaluate)) = self.evaluation_queue.head() {
             if let Some((base, offset)) = to_evaluate.ready_for_evaluation() {
-                let evaluation = EvaluationUnit::exec(to_evaluate.name().to_string(), base, offset);
+                let evaluation =
+                    EvaluationUnit::exec(to_evaluate.command().to_string(), base, offset);
                 self.evaluating = Some(evaluation);
             }
         }
@@ -700,7 +701,7 @@ impl AccessPath for Unit {
         let logical_id = Unit::physical_slot_id_to_logical(slot_id, access_type);
         let slot = station.get_slot(slot_id)?;
         if let SlotState::Pending(inst) = slot {
-            let (access_type, len) = AccessType::parse(inst.name());
+            let (access_type, len) = AccessType::parse(inst.command());
             /*
              * Argument format of instructions are:
              * - lw: [address]

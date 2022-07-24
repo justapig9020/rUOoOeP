@@ -41,7 +41,7 @@ impl ExecPath for Unit {
             let idx = tag.slot();
             self.station.sloved(idx);
         }
-        self.station.forwarding(&tag, val);
+        self.station.forward(&tag, val);
     }
     fn try_issue(&mut self, inst: String, renamed_args: &[ArgState]) -> Result<RStag, ()> {
         let inst = ArithInst::new(inst, renamed_args).map_err(|_| ())?;
@@ -108,7 +108,7 @@ impl Unit {
             .get_slot(slot_id)
             .ok_or(format!("Slot {} not exist", slot_id))?;
         if let SlotState::Pending(inst) = slot {
-            let name = inst.name();
+            let name = inst.command();
             let args = inst.arguments();
             let arg0 = args
                 .get(0)
@@ -158,7 +158,7 @@ impl ArithInst {
 }
 
 impl RenamedInst for ArithInst {
-    fn name(&self) -> &str {
+    fn command(&self) -> &str {
         &self.name
     }
     fn arguments(&self) -> Vec<ArgState> {
@@ -168,7 +168,7 @@ impl RenamedInst for ArithInst {
         use ArgState::Ready;
         matches!(self.arg0, Ready(_)) && matches!(self.arg1, Ready(_))
     }
-    fn forwarding(&mut self, tag: &RStag, val: u32) {
+    fn forward(&mut self, tag: &RStag, val: u32) {
         self.arg0.forwarding(tag, val);
         self.arg1.forwarding(tag, val);
     }
