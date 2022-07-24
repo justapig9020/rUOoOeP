@@ -110,16 +110,14 @@ impl Unit {
         if let SlotState::Pending(inst) = slot {
             let name = inst.command();
             let args = inst.arguments();
-            let arg0 = args
-                .get(0)
-                .ok_or("There is no argument 0")?
-                .val()
-                .ok_or_else(|| "Argument 0 is not ready".to_string())?;
-            let arg1 = args
-                .get(1)
-                .ok_or("There is no argument 0")?
-                .val()
-                .ok_or_else(|| "Argument 1 is not ready".to_string())?;
+            let value_of = |idx: usize| -> Result<u32, String> {
+                args.get(idx)
+                    .ok_or_else(|| format!("There is no argument {}", idx))?
+                    .val()
+                    .ok_or_else(|| format!("Argument {} is not ready", idx))
+            };
+            let arg0 = value_of(0)?;
+            let arg1 = value_of(1)?;
             let tag = RStag::new(&self.name(), slot_id);
             self.exec = Some(ExecUnit::exec(tag, name.to_string(), arg0, arg1));
             self.station.start_execute(slot_id)?;
