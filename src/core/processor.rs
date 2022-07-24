@@ -252,7 +252,6 @@ impl Processor {
             .count();
         let no_instruction_executing = executing_arith + executing_mem == 0;
         let no_writeback = self.result_bus.is_free();
-        println!("{no_instruction_executing} {no_writeback}");
         no_instruction_executing && no_writeback
     }
     pub fn bus_access(&mut self) -> Option<BusAccessRequst> {

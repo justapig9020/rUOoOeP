@@ -26,28 +26,22 @@ fn main() -> Result<(), String> {
     let mut tick = 0;
     let mut result = Ok(());
     while result.is_ok() {
+        tick += 1;
         println!("================ {tick} ================");
         print!("{vm}");
         pause();
         result = vm.next_cycle();
-        tick += 1;
     }
 
     result = Ok(());
     while result.is_ok() {
+        result = vm.next_flush_cycle();
         println!("================ {tick} ================");
         println!("{vm}");
         pause();
-        result = vm.next_flush_cycle();
         tick += 1;
     }
 
-    println!("{:?}", result);
-
-    let (p, dram) = vm.splite();
-    println!("Emulation finished");
-    println!("{:#?}", p);
-    println!("{:?}", dram);
     Ok(())
 }
 
