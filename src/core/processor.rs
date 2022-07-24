@@ -5,7 +5,7 @@ use super::execution_path::{
 use super::nop_unit;
 use super::register::RegisterFile;
 use super::result_bus::ResultBus;
-use crate::display::into_table;
+use crate::display::{into_table, side_by_side};
 use std::collections::{HashMap, LinkedList};
 use std::fmt::{self, Display};
 
@@ -62,15 +62,17 @@ impl fmt::Display for Processor {
             });
         let last_instruction = self.decoder.last_instruction().to_string();
         writeln!(f, "{}", into_table("Instruction", vec![last_instruction]))?;
-        writeln!(f, "{}", into_table("Registers", registers))?;
+        let registers = into_table("Registers", registers);
+        let mut paths = String::new();
         for (_, p) in self.arithmetic_paths.iter() {
-            writeln!(f, "{}", p)?;
+            paths.push_str(&format!("{p}"));
         }
+        writeln!(f, "{}", side_by_side(registers, paths, 6))?;
         for (_, p) in self.access_paths.iter() {
             writeln!(f, "{}", p)?;
         }
         writeln!(f, "{}", self.bus_controller)?;
-        writeln!(f, "{}", self.result_bus)
+        write!(f, "{}", self.result_bus)
     }
 }
 

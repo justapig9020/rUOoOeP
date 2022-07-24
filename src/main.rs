@@ -27,7 +27,7 @@ fn main() -> Result<(), String> {
     let mut result = Ok(());
     while result.is_ok() {
         println!("================ {tick} ================");
-        println!("{vm}");
+        print!("{vm}");
         pause();
         result = vm.next_cycle();
         tick += 1;

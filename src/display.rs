@@ -1,4 +1,39 @@
 use std::cmp;
+pub fn side_by_side(table1: String, table2: String, gap: usize) -> String {
+    if table1.is_empty() {
+        return table2;
+    } else if table2.is_empty() {
+        return table1;
+    }
+    let mut table1: Vec<&str> = table1.lines().collect();
+    let mut table2: Vec<&str> = table2.lines().collect();
+
+    let len1 = table1.len();
+    let len2 = table2.len();
+    let shorter = if len1 < len2 {
+        &mut table1
+    } else {
+        &mut table2
+    };
+    let diff = len1.abs_diff(len2);
+    for _ in 0..diff {
+        shorter.push("");
+    }
+
+    let max = table1.iter().map(|s| s.len()).max().unwrap();
+    let mut result = String::new();
+    for (s1, s2) in table1.iter().zip(table2.iter()) {
+        let pending = max - s1.len() + gap;
+        result.push_str(s1);
+        for _ in 0..pending {
+            result.push_str(" ");
+        }
+        result.push_str(s2);
+        result.push_str("\n");
+    }
+    result
+}
+
 pub fn into_table(title: &str, rows: Vec<String>) -> String {
     if rows.is_empty() {
         return String::new();
