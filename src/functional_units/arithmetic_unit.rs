@@ -203,8 +203,8 @@ impl Display for ExecUnit {
 impl ExecUnit {
     fn exec(tag: RStag, inst: String, arg0: u32, arg1: u32) -> Self {
         let (cycle, result) = match inst.as_str() {
-            "add" | "addi" => (1, arg0 + arg1),
-            "muli" | "mul" => (5, arg0 * arg1),
+            "add" | "addi" => (0, arg0 + arg1),
+            "muli" | "mul" => (3, arg0 * arg1),
             _ => (0, 0),
         };
         Self {
