@@ -203,6 +203,17 @@ impl Processor {
         let mut next_pc = self.pc;
         self.commit();
 
+        for (_, unit) in self.arithmetic_paths.iter_mut() {
+            unit.next_cycle(&mut self.result_bus)?;
+        }
+
+        for (_, unit) in self.access_paths.iter_mut() {
+            unit.next_cycle(&mut self.result_bus)?;
+            if let Some(r) = unit.request() {
+                self.bus_controller.push(r);
+            }
+        }
+
         let inst = self.decoder.decode(row_inst)?;
         let args = inst.arguments();
         let mut renamed_args = Vec::with_capacity(args.len());
@@ -220,17 +231,6 @@ impl Processor {
         if let IssueResult::Issued(tag) = result {
             next_pc += 1;
             self.register_renaming(tag, inst)?;
-        }
-
-        for (_, unit) in self.arithmetic_paths.iter_mut() {
-            unit.next_cycle(&mut self.result_bus)?;
-        }
-
-        for (_, unit) in self.access_paths.iter_mut() {
-            unit.next_cycle(&mut self.result_bus)?;
-            if let Some(r) = unit.request() {
-                self.bus_controller.push(r);
-            }
         }
 
         self.pc = next_pc;
