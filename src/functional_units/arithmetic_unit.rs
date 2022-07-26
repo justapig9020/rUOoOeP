@@ -93,11 +93,13 @@ impl Display for Unit {
             .map(|slot| format!("{}", slot))
             .collect();
         writeln!(f, "{}", into_table("Reservation station", slots))?;
-        if let Some(exec) = self.exec.as_ref() {
-            let exec = exec.to_string();
-            let table = into_table("Executing", vec![exec]);
-            writeln!(f, "{table}")?;
-        }
+        let exec = if let Some(exec) = self.exec.as_ref() {
+            exec.to_string()
+        } else {
+            String::new()
+        };
+        let table = into_table("Executing", vec![exec]);
+        writeln!(f, "{table}")?;
         Ok(())
     }
 }
@@ -106,7 +108,7 @@ impl Unit {
     pub fn new(index: usize) -> Self {
         Self {
             name: format!("arith{}", index),
-            station: ReservationStation::new(5),
+            station: ReservationStation::new(2),
             exec: None,
         }
     }

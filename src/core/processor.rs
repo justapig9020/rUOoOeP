@@ -64,10 +64,11 @@ impl fmt::Display for Processor {
         writeln!(f, "{}", into_table("Instruction", vec![last_instruction]))?;
         let registers = into_table("Registers", registers);
         let mut paths = String::new();
+        let gap = 5;
         for (_, p) in self.arithmetic_paths.iter() {
-            paths.push_str(&format!("{p}"));
+            paths = side_by_side(paths, p.to_string(), gap);
         }
-        writeln!(f, "{}", side_by_side(registers, paths, 6))?;
+        writeln!(f, "{}", side_by_side(registers, paths, gap))?;
         for (_, p) in self.access_paths.iter() {
             writeln!(f, "{}", p)?;
         }

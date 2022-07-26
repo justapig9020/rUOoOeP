@@ -4,7 +4,7 @@ use std::{default::Default, fmt::Display};
 #[derive(Default, Debug)]
 /// Renamable register file
 pub struct RegisterFile {
-    entries: [Entry; 16],
+    entries: [Entry; 4],
 }
 
 #[derive(Debug, Default)]
