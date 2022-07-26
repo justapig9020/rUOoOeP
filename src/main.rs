@@ -11,7 +11,12 @@ use crate::functional_units::factory::{Factory, Function, MemFunction};
 use std::io;
 
 fn main() -> Result<(), String> {
-    let program = vec!["addi R1, R0, #100", "addi R1, R1, #200", "add R2, R1, R1"];
+    let program = vec![
+        "addi R1, R0, #100",
+        "muli R2, R1, #10",
+        "addi R1, R0, #200",
+        "add R3, R1, R2",
+    ];
 
     let program = program.iter().map(|i| i.to_string()).collect();
 

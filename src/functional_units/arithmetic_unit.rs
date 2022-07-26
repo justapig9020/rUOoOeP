@@ -33,6 +33,16 @@ impl ExecPath for Unit {
                 .add_syntax(TokenType::Register)
                 .add_syntax(TokenType::Immediate)
                 .done(),
+            InstFormat::create("muli")
+                .add_syntax(TokenType::Writeback)
+                .add_syntax(TokenType::Register)
+                .add_syntax(TokenType::Immediate)
+                .done(),
+            InstFormat::create("mul")
+                .add_syntax(TokenType::Writeback)
+                .add_syntax(TokenType::Register)
+                .add_syntax(TokenType::Register)
+                .done(),
         ]
     }
     fn forward(&mut self, tag: RStag, val: u32) {
@@ -194,6 +204,7 @@ impl ExecUnit {
     fn exec(tag: RStag, inst: String, arg0: u32, arg1: u32) -> Self {
         let (cycle, result) = match inst.as_str() {
             "add" | "addi" => (1, arg0 + arg1),
+            "muli" | "mul" => (5, arg0 * arg1),
             _ => (0, 0),
         };
         Self {
